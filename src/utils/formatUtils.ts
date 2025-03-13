@@ -18,7 +18,7 @@ export const normalizeText = (text: string): string => {
   if (!text) return "";
   // Normalise la chaîne en décomposant les caractères accentués
   // puis en les recomposant avec la forme normalisée
-  return text.normalize("NFD").normalize("NFC");
+  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, '').normalize("NFC");
 };
 
 // Fonction pour détecter les colonnes liées aux entreprises
@@ -30,11 +30,51 @@ export const isCompanyRelatedColumn = (columnName: string): boolean => {
   // Liste de termes liés aux noms d'entreprise en français et en anglais
   const companyTerms = [
     "societe", "société", "company", "entreprise", "organisation", "organization",
-    "client", "customer", "business", "firme", "corporation", "raison sociale",
-    "nom commercial", "établissement", "etablissement"
+    "firme", "corporation", "raison sociale", "nom commercial", "établissement", 
+    "etablissement", "facturation.societe", "facturation.société"
   ];
   
-  return companyTerms.some(term => normalizedColumn.includes(term));
+  // Éviter d'utiliser des colonnes d'identifiants comme noms d'entreprise
+  const excludeTerms = ["identifiant", "id", "code", "numero", "numéro", "oxatis"];
+  
+  // Vérifier si le nom de colonne contient des termes d'entreprise mais pas des termes d'exclusion
+  const containsCompanyTerm = companyTerms.some(term => normalizedColumn.includes(term));
+  const containsExcludeTerm = excludeTerms.some(term => normalizedColumn.includes(term));
+  
+  return containsCompanyTerm && !containsExcludeTerm;
+};
+
+// Fonction pour détecter les colonnes liées aux noms des clients/entreprises réels (pas des identifiants)
+export const isActualCompanyNameColumn = (columnName: string): boolean => {
+  if (!columnName) return false;
+  
+  const normalizedColumn = normalizeText(columnName.toLowerCase());
+  
+  // Termes plus spécifiques pour les noms réels d'entreprises
+  const nameTerms = [
+    "nom société", "nom societe", "nom entreprise", "company name", 
+    "raison sociale", "nom commercial", "dénomination sociale", "denomination sociale",
+    "nom client", "facturation.nom", "facturation.société", "facturation.societe",
+    "client.nom", "société.nom", "societe.nom"
+  ];
+  
+  return nameTerms.some(term => normalizedColumn.includes(term));
+};
+
+// Fonction pour détecter s'il s'agit d'un nom de personne et non d'une entreprise
+export const isPersonNameColumn = (columnName: string): boolean => {
+  if (!columnName) return false;
+  
+  const normalizedColumn = normalizeText(columnName.toLowerCase());
+  
+  // Termes spécifiques pour les noms de personnes
+  const personTerms = [
+    ".prenom", ".prénom", ".nom", "firstname", "lastname", 
+    "first name", "last name", "nom client", "nom du client", 
+    "prénom client", "prenom client"
+  ];
+  
+  return personTerms.some(term => normalizedColumn.includes(term));
 };
 
 // Fonction pour détecter les colonnes liées aux numéros de TVA/NII
@@ -47,7 +87,8 @@ export const isVATNumberRelatedColumn = (columnName: string): boolean => {
   const vatTerms = [
     "tva", "vat", "nii", "numero tva", "numéro tva", "tax number", "tax id",
     "numero fiscal", "numéro fiscal", "id fiscal", "identifiant fiscal",
-    "siret", "siren", "no tva", "n° tva", "no vat", "n° vat"
+    "siret", "siren", "no tva", "n° tva", "no vat", "n° vat", "société.nii", 
+    "societe.nii", "société.tva", "societe.tva"
   ];
   
   return vatTerms.some(term => normalizedColumn.includes(term));

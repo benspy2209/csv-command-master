@@ -11,7 +11,9 @@ import {
   parseCommaNumber, 
   normalizeText,
   isCompanyRelatedColumn,
-  isVATNumberRelatedColumn
+  isVATNumberRelatedColumn,
+  isActualCompanyNameColumn,
+  isPersonNameColumn
 } from "@/utils/formatUtils";
 
 interface CSVImporterProps {
@@ -99,6 +101,13 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
               "BusinessName", "Client.Name", "Customer.Company", "Client.BusinessName",
               "Nom.Commercial", "Etablissement", "Nom.Etablissement"
             ],
+            firstName: [
+              "Facturation.Prénom", "Facturation.Prenom", "Prénom", "Prenom", 
+              "FirstName", "Client.Prénom", "Client.Prenom"
+            ],
+            lastName: [
+              "Facturation.Nom", "Nom", "LastName", "Client.Nom", "Surname"
+            ],
             vatNumber: [
               "Société.NII", "NII", "VATNumber", "NumeroTVA", "TVA", "VAT",
               "NumTVA", "Société.NII", "Société.TVA", "Company.VAT", "Company.VATNumber",
@@ -124,6 +133,9 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
           
           // For each of our required fields
           Object.entries(normalizedColumnMappings).forEach(([fieldName, normalizedPossibleNames]) => {
+            // Skip firstName and lastName as they are optional and handled separately
+            if (fieldName === 'firstName' || fieldName === 'lastName') return;
+            
             // Check if any of the possible column names exist in the headers
             const normalizedHeaders = headers.map(header => normalizeText(header).toLowerCase());
             const rawHeadersLower = rawHeaders.map(header => header.toLowerCase());
@@ -147,25 +159,81 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             } 
             // Si aucun match direct, essayons une approche plus flexible pour les champs spécifiques
             else if (fieldName === 'company' || fieldName === 'vatNumber') {
-              // Pour company et vatNumber, on utilise une approche plus heuristique
-              const isRelatedColumn = fieldName === 'company' 
-                ? isCompanyRelatedColumn 
-                : isVATNumberRelatedColumn;
+              // Cherchons des en-têtes plus précis pour le nom de l'entreprise
+              if (fieldName === 'company') {
+                // D'abord, chercher des colonnes de noms réels d'entreprises
+                const companyNameIndex = rawHeaders.findIndex(header => 
+                  isActualCompanyNameColumn(normalizeText(header))
+                );
                 
-              // Chercher une colonne qui contient des termes liés
-              const relatedColumnIndex = rawHeaders.findIndex(header => 
-                isRelatedColumn(normalizeText(header))
-              );
-              
-              if (relatedColumnIndex !== -1) {
-                fieldMappings[fieldName] = rawHeaders[relatedColumnIndex];
-                console.log(`Mapping heuristique trouvé pour ${fieldName}: ${fieldMappings[fieldName]}`);
-              } else {
-                // Si company ou vatNumber manquent, on crée des valeurs fictives pour éviter le blocage
-                if (fieldName === 'company') {
-                  console.warn("Aucune colonne d'entreprise trouvée, utilisation de valeurs par défaut");
-                  fieldMappings[fieldName] = "__company__"; // Marqueur spécial
-                } else if (fieldName === 'vatNumber') {
+                if (companyNameIndex !== -1) {
+                  fieldMappings[fieldName] = rawHeaders[companyNameIndex];
+                  console.log(`Mapping de nom réel d'entreprise trouvé: ${fieldMappings[fieldName]}`);
+                } else {
+                  // Ensuite, chercher n'importe quelle colonne liée à l'entreprise
+                  const companyRelatedIndex = rawHeaders.findIndex(header => 
+                    isCompanyRelatedColumn(normalizeText(header))
+                  );
+                  
+                  if (companyRelatedIndex !== -1) {
+                    fieldMappings[fieldName] = rawHeaders[companyRelatedIndex];
+                    console.log(`Mapping d'entreprise générique trouvé: ${fieldMappings[fieldName]}`);
+                  } else {
+                    // Chercher les champs prénom et nom pour construire un nom de société
+                    const firstNameIndex = rawHeaders.findIndex(header => 
+                      normalizedColumnMappings.firstName.some(name => 
+                        normalizeText(header).toLowerCase().includes(name)
+                      )
+                    );
+                    
+                    const lastNameIndex = rawHeaders.findIndex(header => 
+                      normalizedColumnMappings.lastName.some(name => 
+                        normalizeText(header).toLowerCase().includes(name)
+                      )
+                    );
+                    
+                    if (firstNameIndex !== -1) {
+                      fieldMappings['firstName'] = rawHeaders[firstNameIndex];
+                      console.log(`Mapping pour prénom trouvé: ${fieldMappings['firstName']}`);
+                    }
+                    
+                    if (lastNameIndex !== -1) {
+                      fieldMappings['lastName'] = rawHeaders[lastNameIndex];
+                      console.log(`Mapping pour nom trouvé: ${fieldMappings['lastName']}`);
+                    }
+                    
+                    if (firstNameIndex !== -1 || lastNameIndex !== -1) {
+                      // Utiliser un marqueur spécial pour indiquer qu'on doit construire le nom
+                      fieldMappings[fieldName] = "__person_name__";
+                      console.log(`Utilisation des champs de nom de personne pour l'entreprise`);
+                    } else {
+                      // Utiliser un identifiant client comme dernier recours
+                      const clientIdIndex = rawHeaders.findIndex(header => 
+                        normalizeText(header).toLowerCase().includes("client.identifiant") ||
+                        normalizeText(header).toLowerCase().includes("client.id")
+                      );
+                      
+                      if (clientIdIndex !== -1) {
+                        fieldMappings[fieldName] = rawHeaders[clientIdIndex];
+                        console.log(`Utilisation d'identifiant client comme nom: ${fieldMappings[fieldName]}`);
+                      } else {
+                        console.warn("Aucune colonne d'entreprise trouvée, utilisation de valeurs par défaut");
+                        fieldMappings[fieldName] = "__company__"; // Marqueur spécial
+                      }
+                    }
+                  }
+                }
+              }
+              // Pour vatNumber, recherche similaire
+              else if (fieldName === 'vatNumber') {
+                const vatColumnIndex = rawHeaders.findIndex(header => 
+                  isVATNumberRelatedColumn(normalizeText(header))
+                );
+                
+                if (vatColumnIndex !== -1) {
+                  fieldMappings[fieldName] = rawHeaders[vatColumnIndex];
+                  console.log(`Mapping pour TVA trouvé: ${fieldMappings[fieldName]}`);
+                } else {
                   console.warn("Aucune colonne de TVA trouvée, utilisation de valeurs par défaut");
                   fieldMappings[fieldName] = "__vatNumber__"; // Marqueur spécial
                 }
@@ -186,12 +254,36 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
 
           // Process the data using the mapped field names and handle encoding issues
           const processedData = (results.data as any[]).map((row, index) => {
-            // Utilisez une valeur par défaut si company n'est pas trouvé
-            let companyName = "__company__";
+            // Traitement du nom de l'entreprise selon le type de mapping trouvé
+            let companyName = "";
+            
             if (fieldMappings.company === "__company__") {
               companyName = `Client ${index + 1}`; // Valeur par défaut numérotée
+            } else if (fieldMappings.company === "__person_name__") {
+              // Construire un nom à partir des champs prénom et nom
+              const firstName = fieldMappings.firstName ? normalizeText(row[fieldMappings.firstName] || "") : "";
+              const lastName = fieldMappings.lastName ? normalizeText(row[fieldMappings.lastName] || "") : "";
+              
+              if (firstName || lastName) {
+                companyName = `${firstName} ${lastName}`.trim();
+              } else {
+                companyName = `Client ${index + 1}`;
+              }
             } else {
               companyName = normalizeText(row[fieldMappings.company] || "");
+              
+              // Si le nom de l'entreprise semble être un identifiant numérique, essayons de le remplacer
+              if (/^\d+$/.test(companyName)) {
+                // Essayer d'utiliser prénom/nom si disponibles
+                const firstName = fieldMappings.firstName ? normalizeText(row[fieldMappings.firstName] || "") : "";
+                const lastName = fieldMappings.lastName ? normalizeText(row[fieldMappings.lastName] || "") : "";
+                
+                if (firstName || lastName) {
+                  companyName = `${firstName} ${lastName}`.trim();
+                } else {
+                  companyName = `Client ${companyName}`;
+                }
+              }
             }
             
             const totalTaxes = parseCommaNumber(row[fieldMappings.totalTaxes] || "0");
@@ -199,8 +291,8 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             const totalAmount = parseCommaNumber(row[fieldMappings.totalAmount] || "0");
             const totalVAT = totalTaxes + shippingVAT;
             
-            // Utilisez une valeur par défaut si vatNumber n'est pas trouvé
-            let vatNumber = "__vatNumber__";
+            // Traitement du numéro de TVA
+            let vatNumber = "";
             if (fieldMappings.vatNumber === "__vatNumber__") {
               vatNumber = `TVA${index + 1}`; // Valeur par défaut numérotée
             } else {
