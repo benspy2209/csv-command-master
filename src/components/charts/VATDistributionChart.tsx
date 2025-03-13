@@ -19,8 +19,14 @@ export function VATDistributionChart({ data }: VATDistributionChartProps) {
       ];
     }
     
-    const totalAmount = data.reduce((sum, order) => sum + order.totalAmount, 0);
-    const totalVAT = data.reduce((sum, order) => sum + order.totalVAT, 0);
+    const totalAmount = data.reduce((sum, order) => {
+      return sum + parseFloat(String(order.totalAmount).replace(',', '.'));
+    }, 0);
+    
+    const totalVAT = data.reduce((sum, order) => {
+      return sum + parseFloat(String(order.totalVAT).replace(',', '.'));
+    }, 0);
+    
     const totalExcludingVAT = totalAmount - totalVAT;
     
     return [

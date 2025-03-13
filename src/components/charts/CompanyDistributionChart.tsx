@@ -23,8 +23,11 @@ export function CompanyDistributionChart({ data }: CompanyDistributionChartProps
         ? order.company 
         : "Non spécifié";
       
+      // Convertir le montant en nombre avec précision maximale
+      const orderAmount = parseFloat(String(order.totalAmount).replace(',', '.'));
+      
       const currentTotal = companyMap.get(company) || 0;
-      companyMap.set(company, currentTotal + order.totalAmount);
+      companyMap.set(company, currentTotal + orderAmount);
     });
     
     // Limiter à 5 sociétés + "Autres" pour éviter la surcharge du graphique
