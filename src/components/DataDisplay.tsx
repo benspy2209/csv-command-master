@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { OrderData } from "@/pages/Index";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataVisualization } from "@/components/DataVisualization";
@@ -33,11 +33,8 @@ export function DataDisplay({ data }: DataDisplayProps) {
   const months = useMemo(() => getUniqueMonths(data), [data]);
   const companies = useMemo(() => getUniqueCompanies(data), [data]);
   
-  useMemo(() => {
-    if (months.length > 0 && !selectedMonth) {
-      setSelectedMonth(months[0]);
-    }
-  }, [months, selectedMonth]);
+  // Removed the problematic useEffect that was automatically setting the first month
+  // This allows the "all months" filter to work properly as the default
 
   const handleAmountChange = (min: number | null, max: number | null) => {
     setMinAmount(min);
