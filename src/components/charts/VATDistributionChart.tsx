@@ -2,6 +2,7 @@
 import { useMemo } from "react";
 import { OrderData } from "@/pages/Index";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { formatCurrency, getTooltipStyle, CHART_COLORS } from "@/utils/chartUtils";
 
 interface VATDistributionChartProps {
   data: OrderData[];
@@ -36,9 +37,6 @@ export function VATDistributionChart({ data }: VATDistributionChartProps) {
     ];
   }, [data]);
 
-  // Formater les montants en euros
-  const formatCurrency = (value: number) => `${value.toFixed(2)} €`;
-
   // Vérifier si des données sont disponibles
   const hasData = data.length > 0;
 
@@ -60,17 +58,12 @@ export function VATDistributionChart({ data }: VATDistributionChartProps) {
                 nameKey="name"
                 label={({ name, percentage }) => `${name}: ${percentage}`}
               >
-                <Cell fill="#00C49F" />
-                <Cell fill="#FF8042" />
+                <Cell fill={CHART_COLORS[1]} />
+                <Cell fill={CHART_COLORS[3]} />
               </Pie>
               <Tooltip 
                 formatter={(value) => formatCurrency(value as number)}
-                contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: '4px',
-                  padding: '10px'
-                }}
+                contentStyle={getTooltipStyle()}
               />
               <Legend 
                 layout="horizontal" 

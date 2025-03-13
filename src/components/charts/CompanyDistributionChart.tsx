@@ -2,13 +2,11 @@
 import { useMemo } from "react";
 import { OrderData } from "@/pages/Index";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { formatCurrency, getTooltipStyle, CHART_COLORS } from "@/utils/chartUtils";
 
 interface CompanyDistributionChartProps {
   data: OrderData[];
 }
-
-// Couleurs pour les graphiques (palette améliorée)
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#d0ed57'];
 
 export function CompanyDistributionChart({ data }: CompanyDistributionChartProps) {
   // Données pour le graphique circulaire (par société)
@@ -63,9 +61,6 @@ export function CompanyDistributionChart({ data }: CompanyDistributionChartProps
     ];
   }, [data]);
 
-  // Formater les montants en euros
-  const formatCurrency = (value: number) => `${value.toFixed(2)} €`;
-
   // Vérifier si des données sont disponibles
   const hasData = data.length > 0;
 
@@ -88,17 +83,12 @@ export function CompanyDistributionChart({ data }: CompanyDistributionChartProps
                 label={({ name, percentage }) => `${name}: ${percentage}`}
               >
                 {companyData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip 
                 formatter={(value) => formatCurrency(value as number)}
-                contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: '4px',
-                  padding: '10px'
-                }}
+                contentStyle={getTooltipStyle()}
               />
               <Legend 
                 layout="horizontal" 
