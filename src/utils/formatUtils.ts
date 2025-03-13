@@ -1,10 +1,9 @@
-
 // Fonction pour nettoyer les numéros de TVA
 export const cleanVATNumber = (vatNumber: string): string => {
   if (!vatNumber) return "";
   
-  // Enlever tous les espaces, points, tirets
-  return vatNumber.replace(/[\s.-]/g, '');
+  // Enlever tous les espaces, points, tirets et convertir en uppercase
+  return vatNumber.replace(/[\s.-]/g, '').toUpperCase();
 };
 
 // Fonction pour convertir les nombres avec virgule en nombres avec point
