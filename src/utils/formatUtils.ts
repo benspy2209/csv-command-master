@@ -41,8 +41,8 @@ export const fixEncodingIssues = (text: string): string => {
     'â‚¬': '€',
     // Using string literals without problematic characters
     'â€™': "'",
-    'â€"': '–',
-    'â€"': '—',
+    'â€\u2013': '–', // en dash
+    'â€\u2014': '—', // em dash
     'â€œ': '"',
     'â€': '"',
     'Å"': 'œ',
