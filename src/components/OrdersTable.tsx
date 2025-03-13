@@ -45,8 +45,8 @@ export function OrdersTable({ filteredData }: OrdersTableProps) {
         <TableBody>
           {filteredData.map((order) => {
             // Calculs avec préservation des décimales
-            const totalAmount = String(order.totalAmount);
-            const totalVAT = String(order.totalVAT);
+            const totalAmount = order.totalAmount;
+            const totalVAT = order.totalVAT;
             
             // Calcul de HT = TTC - TVA avec précision maximale
             const amountExclVAT = (
