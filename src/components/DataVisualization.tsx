@@ -18,52 +18,68 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 export function DataVisualization({ data }: DataVisualizationProps) {
   // Regrouper les données par jour pour le graphique à barres
   const dailyData = useMemo(() => {
+    if (data.length === 0) {
+      return [{ date: "Aucune donnée", amount: 0, count: 0 }];
+    }
+
     const dailyMap = new Map<string, { amount: number, count: number }>();
     
+    // Format de date attendu: dd/MM/yyyy
     data.forEach(order => {
+      if (!order.date) return;
+      
+      // Validez et normalisez le format de date
+      const dateStr = order.date.trim();
+      if (!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        console.error("Format de date invalide:", dateStr);
+        return;
+      }
+      
       try {
-        // Vérifier si la date est au bon format
-        if (order.date && order.date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-          const date = parse(order.date, "dd/MM/yyyy", new Date());
-          
-          if (isValid(date)) {
-            const day = format(date, "dd/MM", { locale: fr });
-            const currentData = dailyMap.get(day) || { amount: 0, count: 0 };
-            
-            dailyMap.set(day, { 
-              amount: currentData.amount + order.totalAmount,
-              count: currentData.count + 1
-            });
-          }
+        const date = parse(dateStr, "dd/MM/yyyy", new Date());
+        
+        if (!isValid(date)) {
+          console.error("Date invalide après analyse:", dateStr);
+          return;
         }
+        
+        const day = format(date, "dd/MM", { locale: fr });
+        const currentData = dailyMap.get(day) || { amount: 0, count: 0 };
+        
+        dailyMap.set(day, { 
+          amount: currentData.amount + order.totalAmount,
+          count: currentData.count + 1
+        });
       } catch (e) {
-        console.error("Erreur lors du traitement de la date:", order.date, e);
+        console.error("Erreur lors du traitement de la date:", dateStr, e);
       }
     });
     
-    // Convertir en tableau et trier par date
+    // Convertir en tableau
     const result = Array.from(dailyMap.entries())
       .map(([date, values]) => ({ 
         date, 
         amount: values.amount,
         count: values.count 
-      }))
-      .sort((a, b) => {
-        try {
-          const dateA = parse(a.date, "dd/MM", new Date());
-          const dateB = parse(b.date, "dd/MM", new Date());
-          return dateA.getTime() - dateB.getTime();
-        } catch (e) {
-          console.error("Erreur lors du tri des dates:", a.date, b.date, e);
-          return 0;
-        }
-      });
+      }));
     
-    // Si aucune donnée, créer une entrée par défaut
+    // Tri par date (jour/mois)
+    result.sort((a, b) => {
+      // Extraire jour et mois
+      const [dayA, monthA] = a.date.split('/').map(Number);
+      const [dayB, monthB] = b.date.split('/').map(Number);
+      
+      // Comparer d'abord par mois puis par jour
+      if (monthA !== monthB) return monthA - monthB;
+      return dayA - dayB;
+    });
+    
+    // Si aucune donnée après traitement
     if (result.length === 0) {
       return [{ date: "Aucune donnée", amount: 0, count: 0 }];
     }
     
+    console.log("Données journalières:", result);
     return result;
   }, [data]);
 
@@ -152,15 +168,19 @@ export function DataVisualization({ data }: DataVisualizationProps) {
 
   // Vérifier si des données sont disponibles pour afficher les graphiques
   const hasData = data.length > 0;
+  const hasVentesByDay = dailyData.length > 0 && dailyData[0].date !== "Aucune donnée";
 
   return (
     <div className="space-y-8">
       <div className="bg-background border rounded-lg p-4 shadow-sm">
         <h3 className="text-lg font-medium mb-4">Ventes par jour</h3>
-        {hasData ? (
+        {hasData && hasVentesByDay ? (
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <BarChart 
+                data={dailyData} 
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis 
                   dataKey="date" 
@@ -169,6 +189,7 @@ export function DataVisualization({ data }: DataVisualizationProps) {
                 <YAxis 
                   tickFormatter={formatCurrency} 
                   tick={{ fill: '#666', fontSize: 12 }}
+                  width={80}
                 />
                 <Tooltip 
                   formatter={(value) => formatCurrency(value as number)}
