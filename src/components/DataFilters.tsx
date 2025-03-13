@@ -138,7 +138,7 @@ export function DataFilters({
                         <SelectValue placeholder="Toutes les sociétés" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Toutes les sociétés</SelectItem>
+                        <SelectItem value="all">Toutes les sociétés</SelectItem>
                         {companies.map(company => (
                           <SelectItem key={company} value={company}>{company}</SelectItem>
                         ))}
