@@ -21,6 +21,7 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0]);
       setError(null);
+      console.log("Fichier sélectionné:", e.target.files[0].name);
     }
   };
 
@@ -32,6 +33,7 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
 
     setIsProcessing(true);
     setError(null);
+    console.log("Début du traitement du fichier:", file.name);
 
     Papa.parse(file, {
       header: true,
@@ -39,8 +41,16 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
       complete: (results) => {
         setIsProcessing(false);
         try {
-          if (results.errors.length > 0) {
+          console.log("Résultats du parsing:", results);
+          
+          if (results.errors && results.errors.length > 0) {
+            console.error("Erreurs de parsing:", results.errors);
             setError(`Erreur lors de l'analyse du CSV: ${results.errors[0].message}`);
+            return;
+          }
+
+          if (!results.data || results.data.length === 0) {
+            setError("Le fichier CSV ne contient pas de données valides");
             return;
           }
 
@@ -55,9 +65,12 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
 
           // Vérifier que toutes les colonnes requises sont présentes
           const headers = Object.keys(results.data[0] || {});
+          console.log("En-têtes détectés:", headers);
+          
           const missingColumns = requiredColumns.filter(col => !headers.includes(col));
           
           if (missingColumns.length > 0) {
+            console.error("Colonnes manquantes:", missingColumns);
             setError(`Colonnes manquantes: ${missingColumns.join(", ")}`);
             return;
           }
@@ -80,12 +93,15 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             };
           });
 
+          console.log("Données traitées:", processedData.slice(0, 2));
           onImportSuccess(processedData);
         } catch (err) {
+          console.error("Erreur lors du traitement:", err);
           setError(`Erreur lors du traitement des données: ${(err as Error).message}`);
         }
       },
       error: (err) => {
+        console.error("Erreur de parsing:", err);
         setIsProcessing(false);
         setError(`Erreur lors de l'analyse du fichier: ${err.message}`);
       }
