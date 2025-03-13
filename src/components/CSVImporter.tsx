@@ -61,12 +61,32 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
           
           // Define possible column mappings (multiple possible names for each required field)
           const columnMappings = {
-            date: ["Facture.Date", "Date", "OrderDate", "InvoiceDate", "Date.Facture"],
-            totalTaxes: ["Commande.TotalTaxes", "TotalTaxes", "OrderTaxes", "Taxes"],
-            shippingVAT: ["Livraison.MontantTVA", "ShippingVAT", "LivraisonTVA", "TVA.Livraison"],
-            totalAmount: ["Commande.MontantTotal", "MontantTotal", "TotalAmount", "OrderTotal"],
-            company: ["Facturation.Société", "Société", "Company", "CompanyName", "Entreprise"],
-            vatNumber: ["Société.NII", "NII", "VATNumber", "NumeroTVA", "TVA"]
+            date: [
+              "Facture.Date", "Date", "OrderDate", "InvoiceDate", "Date.Facture",
+              "Commande.Date", "DateFacture", "Invoice.Date", "Order.Date"
+            ],
+            totalTaxes: [
+              "Commande.TotalTaxes", "TotalTaxes", "OrderTaxes", "Taxes", 
+              "MontantTaxes", "Commande.MontantTaxes", "Taxes.Total", "Montant.Taxes"
+            ],
+            shippingVAT: [
+              "Livraison.MontantTVA", "ShippingVAT", "LivraisonTVA", "TVA.Livraison",
+              "Livraison.TVA", "TVALivraison", "Shipping.VAT", "DeliveryVAT"
+            ],
+            totalAmount: [
+              "Commande.MontantTotal", "MontantTotal", "TotalAmount", "OrderTotal",
+              "Total", "Montant", "Commande.Total", "Order.Amount", "Total.Order"
+            ],
+            company: [
+              "Facturation.Société", "Société", "Company", "CompanyName", "Entreprise",
+              "Facturation.Entreprise", "Facturation.Company", "Client.Société",
+              "Soci�t�", "Facturation.Soci�t�", "Client.Soci�t�", "Client.Company"
+            ],
+            vatNumber: [
+              "Société.NII", "NII", "VATNumber", "NumeroTVA", "TVA", "VAT",
+              "NumTVA", "Soci�t�.NII", "Soci�t�.TVA", "Company.VAT", "Company.VATNumber",
+              "NoTVA", "Numero.TVA", "Société.TVA", "Société.NumTVA", "TVA.Numero"
+            ]
           };
           
           // Find the actual headers in the file that match our required fields
@@ -75,11 +95,19 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
           
           // For each of our required fields
           Object.entries(columnMappings).forEach(([fieldName, possibleNames]) => {
-            // Try to find a matching header in the CSV
-            const matchedHeader = possibleNames.find(name => headers.includes(name));
+            // Check if any of the possible column names exist in the headers
+            const matchedHeader = possibleNames.find(name => 
+              headers.some(header => header.toLowerCase() === name.toLowerCase())
+            );
             
             if (matchedHeader) {
-              fieldMappings[fieldName] = matchedHeader;
+              // Find the exact case-sensitive header name as it appears in the file
+              const exactHeader = headers.find(
+                header => header.toLowerCase() === matchedHeader.toLowerCase()
+              );
+              if (exactHeader) {
+                fieldMappings[fieldName] = exactHeader;
+              }
             } else {
               missingFields.push(possibleNames[0]); // Add the primary name of the missing field
             }
@@ -154,9 +182,9 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
               className="cursor-pointer"
             />
             <p className="text-xs text-muted-foreground">
-              Le fichier doit contenir les colonnes: Facture.Date, Commande.TotalTaxes, 
-              Livraison.MontantTVA, Commande.MontantTotal, Facturation.Société, Société.NII
-              (ou des noms similaires pour ces données)
+              Le fichier doit contenir les colonnes: Facture.Date, 
+              Commande.TotalTaxes, Livraison.MontantTVA, Commande.MontantTotal, 
+              Facturation.Société, Société.NII (ou des noms similaires pour ces données)
             </p>
           </div>
 
