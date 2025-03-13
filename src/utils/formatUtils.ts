@@ -12,3 +12,11 @@ export const parseCommaNumber = (value: string | number): number => {
   // Remplacer la virgule par un point pour l'analyse numérique correcte
   return parseFloat(value.replace(",", "."));
 };
+
+// Fonction pour normaliser les caractères accentués et spéciaux
+export const normalizeText = (text: string): string => {
+  if (!text) return "";
+  // Normalise la chaîne en décomposant les caractères accentués
+  // puis en les recomposant avec la forme normalisée
+  return text.normalize("NFD").normalize("NFC");
+};

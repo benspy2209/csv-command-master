@@ -26,6 +26,14 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
     }
   };
 
+  // Fonction pour normaliser les caractères accentués et spéciaux
+  const normalizeString = (str: string): string => {
+    if (!str) return "";
+    // Normalise la chaîne en décomposant les caractères accentués
+    // puis en les recomposant avec la forme normalisée
+    return str.normalize("NFD").normalize("NFC");
+  };
+
   const processCSV = () => {
     if (!file) {
       setError("Veuillez sélectionner un fichier");
@@ -39,6 +47,7 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      encoding: "UTF-8", // Force UTF-8 encoding
       complete: (results) => {
         setIsProcessing(false);
         try {
@@ -55,8 +64,8 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             return;
           }
 
-          // Get all headers from the file
-          const headers = Object.keys(results.data[0] || {});
+          // Get all headers from the file and normalize them to fix encoding issues
+          const headers = Object.keys(results.data[0] || {}).map(header => normalizeString(header));
           console.log("En-têtes détectés:", headers);
           
           // Define possible column mappings (multiple possible names for each required field)
@@ -80,12 +89,16 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             company: [
               "Facturation.Société", "Société", "Company", "CompanyName", "Entreprise",
               "Facturation.Entreprise", "Facturation.Company", "Client.Société",
-              "Soci�t�", "Facturation.Soci�t�", "Client.Soci�t�", "Client.Company"
+              "Société", "Facturation.Société", "Client.Société", "Client.Company",
+              // Inclure des variantes pour tenir compte des problèmes d'encodage
+              "Societe", "Facturation.Societe", "Client.Societe"
             ],
             vatNumber: [
               "Société.NII", "NII", "VATNumber", "NumeroTVA", "TVA", "VAT",
-              "NumTVA", "Soci�t�.NII", "Soci�t�.TVA", "Company.VAT", "Company.VATNumber",
-              "NoTVA", "Numero.TVA", "Société.TVA", "Société.NumTVA", "TVA.Numero"
+              "NumTVA", "Société.NII", "Société.TVA", "Company.VAT", "Company.VATNumber",
+              "NoTVA", "Numero.TVA", "Société.TVA", "Société.NumTVA", "TVA.Numero",
+              // Inclure des variantes pour tenir compte des problèmes d'encodage
+              "Societe.NII", "Societe.TVA", "Societe.NumTVA"
             ]
           };
           
@@ -93,23 +106,35 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
           const fieldMappings: Record<string, string> = {};
           let missingFields: string[] = [];
           
-          // For each of our required fields
+          // Pour chaque champ requis, normaliser tous les noms possibles
+          const normalizedColumnMappings: Record<string, string[]> = {};
           Object.entries(columnMappings).forEach(([fieldName, possibleNames]) => {
+            normalizedColumnMappings[fieldName] = possibleNames.map(name => normalizeString(name));
+          });
+          
+          // For each of our required fields
+          Object.entries(normalizedColumnMappings).forEach(([fieldName, normalizedPossibleNames]) => {
             // Check if any of the possible column names exist in the headers
-            const matchedHeader = possibleNames.find(name => 
-              headers.some(header => header.toLowerCase() === name.toLowerCase())
+            const normalizedHeaders = headers.map(header => normalizeString(header));
+            
+            // Essaie de trouver un match en utilisant une comparaison insensible à la casse
+            const matchIndex = normalizedPossibleNames.findIndex(name => 
+              normalizedHeaders.some(header => header.toLowerCase() === name.toLowerCase())
             );
             
-            if (matchedHeader) {
-              // Find the exact case-sensitive header name as it appears in the file
-              const exactHeader = headers.find(
-                header => header.toLowerCase() === matchedHeader.toLowerCase()
+            if (matchIndex !== -1) {
+              // Trouver l'en-tête exact tel qu'il apparaît dans le fichier
+              const matchedNormalizedName = normalizedPossibleNames[matchIndex];
+              const headerIndex = normalizedHeaders.findIndex(
+                header => header.toLowerCase() === matchedNormalizedName.toLowerCase()
               );
-              if (exactHeader) {
-                fieldMappings[fieldName] = exactHeader;
+              
+              if (headerIndex !== -1) {
+                fieldMappings[fieldName] = Object.keys(results.data[0] || {})[headerIndex];
+                console.log(`Mapping trouvé pour ${fieldName}: ${fieldMappings[fieldName]}`);
               }
             } else {
-              missingFields.push(possibleNames[0]); // Add the primary name of the missing field
+              missingFields.push(columnMappings[fieldName][0]); // Add the primary name of the missing field
             }
           });
           
@@ -119,8 +144,11 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             return;
           }
 
-          // Process the data using the mapped field names
+          // Process the data using the mapped field names and handle encoding issues
           const processedData = (results.data as any[]).map((row, index) => {
+            // Normalize the company name and other text fields to fix encoding issues
+            const companyName = normalizeString(row[fieldMappings.company] || "");
+            
             const totalTaxes = parseCommaNumber(row[fieldMappings.totalTaxes] || "0");
             const shippingVAT = parseCommaNumber(row[fieldMappings.shippingVAT] || "0");
             const totalAmount = parseCommaNumber(row[fieldMappings.totalAmount] || "0");
@@ -135,7 +163,7 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
               totalTaxes: totalTaxes,
               shippingVAT: shippingVAT,
               totalAmount: totalAmount,
-              company: row[fieldMappings.company] || "",
+              company: companyName,
               vatNumber: cleanedVatNumber,
               totalVAT: totalVAT
             };
