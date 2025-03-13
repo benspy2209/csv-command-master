@@ -119,7 +119,7 @@ export function DataFilters({
                         variant={selectedMonth === month ? "default" : "outline"}
                         size="sm"
                         className="justify-start"
-                        onClick={() => onMonthChange(month === selectedMonth ? null : month)}
+                        onClick={() => onMonthChange(selectedMonth === month ? null : month)}
                       >
                         {formatMonth(month)}
                       </Button>
@@ -131,8 +131,8 @@ export function DataFilters({
                   <div>
                     <Label>Société</Label>
                     <Select 
-                      value={selectedCompany || ""} 
-                      onValueChange={(value) => onCompanyChange(value || null)}
+                      value={selectedCompany || "all"} 
+                      onValueChange={(value) => onCompanyChange(value === "all" ? null : value)}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Toutes les sociétés" />
