@@ -9,17 +9,17 @@ interface CompanyDistributionChartProps {
 }
 
 export function CompanyDistributionChart({ data }: CompanyDistributionChartProps) {
-  // Données pour le graphique circulaire (par société)
+  // Préparer les données par société
   const companyData = useMemo(() => {
-    // Si aucune donnée, créer une entrée par défaut
     if (data.length === 0) {
-      return [{ name: "Aucune donnée", value: 100, percentage: "100%" }];
+      return [{ name: "Aucune donnée", value: 100 }];
     }
     
+    // Calculer le total par société
     const companyMap = new Map<string, number>();
     
     data.forEach(order => {
-      const company = order.company && order.company.trim() !== "" 
+      const company = order.company 
         ? order.company 
         : "Non spécifié";
       
@@ -31,37 +31,28 @@ export function CompanyDistributionChart({ data }: CompanyDistributionChartProps
     });
     
     // Limiter à 5 sociétés + "Autres" pour éviter la surcharge du graphique
-    const sortedEntries = Array.from(companyMap.entries())
+    const sortedCompanies = Array.from(companyMap.entries())
       .sort((a, b) => b[1] - a[1]);
-      
-    const totalAmount = sortedEntries.reduce((sum, [_, value]) => sum + value, 0);
     
-    if (sortedEntries.length <= 5) {
-      return sortedEntries.map(([name, value]) => ({ 
-        name, 
-        value,
-        percentage: `${Math.round((value / totalAmount) * 100)}%`
-      }));
+    const topCompanies = sortedCompanies.slice(0, 5);
+    
+    // Regrouper les autres sociétés
+    if (sortedCompanies.length > 5) {
+      const othersTotal = sortedCompanies
+        .slice(5)
+        .reduce((sum, [_, amount]) => sum + amount, 0);
+      
+      if (othersTotal > 0) {
+        topCompanies.push(["Autres", othersTotal]);
+      }
     }
     
-    // Prendre les 4 premiers et regrouper le reste dans "Autres"
-    const topEntries = sortedEntries.slice(0, 4);
-    const othersValue = sortedEntries
-      .slice(4)
-      .reduce((sum, [, value]) => sum + value, 0);
-      
-    return [
-      ...topEntries.map(([name, value]) => ({ 
-        name, 
-        value,
-        percentage: `${Math.round((value / totalAmount) * 100)}%`
-      })),
-      { 
-        name: "Autres", 
-        value: othersValue,
-        percentage: `${Math.round((othersValue / totalAmount) * 100)}%`
-      }
-    ];
+    // Formater pour le graphique
+    return topCompanies.map(([name, value], index) => ({
+      name,
+      value,
+      fill: CHART_COLORS[index % CHART_COLORS.length]
+    }));
   }, [data]);
 
   // Vérifier si des données sont disponibles
@@ -78,25 +69,25 @@ export function CompanyDistributionChart({ data }: CompanyDistributionChartProps
                 data={companyData}
                 cx="50%"
                 cy="50%"
-                labelLine={true}
+                labelLine={false}
                 outerRadius={90}
                 fill="#8884d8"
                 dataKey="value"
                 nameKey="name"
-                label={({ name, percentage }) => `${name}: ${percentage}`}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
               >
                 {companyData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={entry.fill || CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip 
                 formatter={(value) => formatCurrency(value as number)}
-                contentStyle={getTooltipStyle()}
+                contentStyle={getTooltipStyle()} 
               />
               <Legend 
                 layout="horizontal" 
                 verticalAlign="bottom" 
-                align="center"
+                align="center" 
                 formatter={(value) => <span style={{ fontSize: '12px' }}>{value}</span>}
               />
             </PieChart>
