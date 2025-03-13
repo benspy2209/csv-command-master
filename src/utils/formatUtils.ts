@@ -18,6 +18,17 @@ export const parseCommaNumber = (value: string): number => {
   return isNaN(parsedValue) ? 0 : parsedValue;
 };
 
+// Fonction pour vérifier si un numéro de TVA semble valide
+export const isVATNumberValid = (vatNumber: string): boolean => {
+  if (!vatNumber) return false;
+  
+  // Un numéro de TVA européen valide devrait avoir:
+  // - Au moins 8 caractères
+  // - Commencer par 2 lettres de code pays suivies de chiffres/lettres
+  const vatRegex = /^[A-Z]{2}[A-Z0-9]{6,}$/;
+  return vatRegex.test(vatNumber);
+};
+
 // Fonction pour corriger les problèmes d'encodage des caractères spéciaux
 export const fixEncodingIssues = (text: string): string => {
   if (!text) return "";

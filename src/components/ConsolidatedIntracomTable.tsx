@@ -1,9 +1,10 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Check, X } from "lucide-react";
 import { useState } from "react";
 import { OrderData } from "@/pages/Index";
 import { cleanVATNumber } from "@/utils/dataProcessingUtils";
+import { isVATNumberValid } from "@/utils/formatUtils";
+import { Badge } from "@/components/ui/badge";
 
 interface ConsolidatedData {
   company: string;
@@ -20,7 +21,6 @@ interface ConsolidatedIntracomTableProps {
 export function ConsolidatedIntracomTable({ consolidatedData }: ConsolidatedIntracomTableProps) {
   const [expandedClient, setExpandedClient] = useState<string | null>(null);
 
-  // Fonction pour formater les montants en utilisant la virgule comme séparateur décimal
   const formatCurrency = (amount: number) => {
     return amount.toFixed(2).replace('.', ',') + ' €';
   };
@@ -68,7 +68,20 @@ export function ConsolidatedIntracomTable({ consolidatedData }: ConsolidatedIntr
                   }
                 </TableCell>
                 <TableCell className="font-medium">{client.company}</TableCell>
-                <TableCell>{client.vatNumber}</TableCell>
+                <TableCell className="flex items-center gap-2">
+                  {client.vatNumber}
+                  {client.vatNumber && (
+                    <Badge 
+                      variant={isVATNumberValid(client.vatNumber) ? "default" : "destructive"} 
+                      className="flex items-center gap-1 ml-2"
+                    >
+                      {isVATNumberValid(client.vatNumber) ? 
+                        <Check className="h-3 w-3" /> : 
+                        <X className="h-3 w-3" />
+                      }
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">{client.orderCount}</TableCell>
                 <TableCell className="text-right font-medium">{formatCurrency(client.totalAmount)}</TableCell>
               </TableRow>
