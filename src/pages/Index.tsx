@@ -32,6 +32,20 @@ const Index = () => {
     });
   };
 
+  // Fonction pour effacer toutes les données
+  const clearAllData = () => {
+    setData([]);
+    toast({
+      title: "Données effacées",
+      description: "Toutes les données ont été supprimées.",
+    });
+  };
+
+  // Réinitialiser les données au chargement de la page
+  useState(() => {
+    clearAllData();
+  });
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col gap-8">
@@ -66,7 +80,10 @@ const Index = () => {
           <div className="space-y-6">
             <div className="flex justify-between">
               <h2 className="text-xl font-semibold">Données importées ({data.length} commandes)</h2>
-              <Button onClick={() => setIsImporting(true)}>Importer un nouveau fichier</Button>
+              <div className="space-x-2">
+                <Button variant="outline" onClick={clearAllData}>Effacer les données</Button>
+                <Button onClick={() => setIsImporting(true)}>Importer un nouveau fichier</Button>
+              </div>
             </div>
             <DataDisplay data={data} />
           </div>
