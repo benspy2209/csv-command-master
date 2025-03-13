@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import { OrderData } from "@/pages/Index";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { formatCurrency, getTooltipStyle, CHART_COLORS } from "@/utils/chartUtils";
-import { normalizeText } from "@/utils/dataProcessingUtils";
 
 interface CompanyDistributionChartProps {
   data: OrderData[];
@@ -20,9 +19,8 @@ export function CompanyDistributionChart({ data }: CompanyDistributionChartProps
     const companyMap = new Map<string, number>();
     
     data.forEach(order => {
-      // Ensure company name is properly normalized
       const company = order.company && order.company.trim() !== "" 
-        ? normalizeText(order.company) 
+        ? order.company 
         : "Non spécifié";
       
       const currentTotal = companyMap.get(company) || 0;

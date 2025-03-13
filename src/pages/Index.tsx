@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { CSVImporter } from "@/components/CSVImporter";
@@ -41,12 +41,10 @@ const Index = () => {
     });
   };
 
-  // Fixed: use useEffect instead of useState to avoid resetting data on every render
-  // And only execute once when component mounts
-  useEffect(() => {
-    // If you want to clear data on component mount, uncomment the next line
-    // clearAllData();
-  }, []);
+  // Réinitialiser les données au chargement de la page
+  useState(() => {
+    clearAllData();
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
