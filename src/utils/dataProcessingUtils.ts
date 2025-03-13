@@ -95,7 +95,8 @@ export const filterData = (
     // Filtre intracom - une commande intracom a une TVA à 0€ ET un numéro de TVA valide
     if (showIntracomOnly) {
       // Vérifier que la TVA est à 0 et qu'un numéro de TVA est présent et non vide
-      if (!(parseFloat(String(order.totalVAT)) === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
+      const totalVAT = parseFloat(String(order.totalVAT).replace(',', '.'));
+      if (!(totalVAT === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
         keepItem = false;
       }
     }
@@ -106,12 +107,18 @@ export const filterData = (
     }
     
     // Filtre par montant
-    if (minAmount !== null && parseFloat(String(order.totalAmount)) < minAmount) {
-      keepItem = false;
+    if (minAmount !== null) {
+      const orderAmount = parseFloat(String(order.totalAmount).replace(',', '.'));
+      if (orderAmount < minAmount) {
+        keepItem = false;
+      }
     }
     
-    if (maxAmount !== null && parseFloat(String(order.totalAmount)) > maxAmount) {
-      keepItem = false;
+    if (maxAmount !== null) {
+      const orderAmount = parseFloat(String(order.totalAmount).replace(',', '.'));
+      if (orderAmount > maxAmount) {
+        keepItem = false;
+      }
     }
     
     // Filtre par recherche textuelle (sur société, numéro de commande ou numéro de TVA)
@@ -130,26 +137,30 @@ export const filterData = (
   });
 };
 
-// Calculer les statistiques avec précision absolue (sans aucun arrondi intermédiaire)
+// Calculer les statistiques avec précision absolue (sans aucun arrondi)
 export const calculateStats = (filteredData: OrderData[]) => {
-  // Variables pour stocker les sommes exactes
-  let total = 0;
-  let totalVAT = 0;
+  // Variables pour stocker les sommes exactes (sous forme de strings pour éviter toute perte de précision)
+  let total = "0";
+  let totalVAT = "0";
   
   for (const order of filteredData) {
-    // Convertir en nombre et conserver toutes les décimales
-    total += parseFloat(String(order.totalAmount));
-    totalVAT += parseFloat(String(order.totalVAT));
+    // Convertir les valeurs en nombres avec précision maximale
+    const orderAmount = String(order.totalAmount).replace(',', '.');
+    const orderVAT = String(order.totalVAT).replace(',', '.');
+    
+    // Additionner avec précision
+    total = (parseFloat(total) + parseFloat(orderAmount)).toString();
+    totalVAT = (parseFloat(totalVAT) + parseFloat(orderVAT)).toString();
   }
   
-  // Calculer HT en soustrayant la TVA du total (sans arrondi intermédiaire)
-  const totalExcludingVAT = total - totalVAT;
+  // Calculer HT en soustrayant la TVA du total (sans arrondi)
+  const totalExcludingVAT = (parseFloat(total) - parseFloat(totalVAT)).toString();
   
-  // Retourner les valeurs avec 2 décimales uniquement pour l'affichage
+  // Retourner les valeurs exactes sous forme de strings
   return {
-    total: total.toFixed(2),
-    totalVAT: totalVAT.toFixed(2),
-    totalExcludingVAT: totalExcludingVAT.toFixed(2),
+    total: total,
+    totalVAT: totalVAT,
+    totalExcludingVAT: totalExcludingVAT,
     orderCount: filteredData.length
   };
 };

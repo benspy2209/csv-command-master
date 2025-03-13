@@ -7,10 +7,18 @@ interface OrdersTableProps {
 }
 
 export function OrdersTable({ filteredData }: OrdersTableProps) {
-  // Fonction pour formater les montants en conservant toutes les décimales
-  const formatCurrency = (amount: number) => {
-    // Formater avec 2 décimales systématiquement et remplacer le point par une virgule
-    return amount.toFixed(2).replace('.', ',') + ' €';
+  // Fonction pour formater les montants en préservant toutes les décimales
+  const formatCurrency = (amount: string | number) => {
+    // Convertir en string si ce n'est pas déjà le cas
+    const amountStr = typeof amount === 'string' ? amount : amount.toString();
+    
+    // Remplacer le point par une virgule et ajouter le symbole €
+    // Si le montant n'a pas de décimales, ajouter ",00"
+    const formattedAmount = amountStr.includes('.') 
+      ? amountStr.replace('.', ',') 
+      : `${amountStr},00`;
+      
+    return `${formattedAmount} €`;
   };
 
   if (filteredData.length === 0) {
@@ -35,18 +43,30 @@ export function OrdersTable({ filteredData }: OrdersTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredData.map((order) => (
-            <TableRow key={order.id}>
-              <TableCell>{order.date}</TableCell>
-              <TableCell>{order.company}</TableCell>
-              <TableCell>{order.vatNumber || "-"}</TableCell>
-              <TableCell className="text-right">
-                {formatCurrency(Number(order.totalAmount) - Number(order.totalVAT))}
-              </TableCell>
-              <TableCell className="text-right">{formatCurrency(Number(order.totalVAT))}</TableCell>
-              <TableCell className="text-right">{formatCurrency(Number(order.totalAmount))}</TableCell>
-            </TableRow>
-          ))}
+          {filteredData.map((order) => {
+            // Calculs avec préservation des décimales
+            const totalAmount = String(order.totalAmount);
+            const totalVAT = String(order.totalVAT);
+            
+            // Calcul de HT = TTC - TVA avec précision maximale
+            const amountExclVAT = (
+              parseFloat(totalAmount.replace(',', '.')) - 
+              parseFloat(totalVAT.replace(',', '.'))
+            ).toString();
+            
+            return (
+              <TableRow key={order.id}>
+                <TableCell>{order.date}</TableCell>
+                <TableCell>{order.company}</TableCell>
+                <TableCell>{order.vatNumber || "-"}</TableCell>
+                <TableCell className="text-right">
+                  {formatCurrency(amountExclVAT)}
+                </TableCell>
+                <TableCell className="text-right">{formatCurrency(totalVAT)}</TableCell>
+                <TableCell className="text-right">{formatCurrency(totalAmount)}</TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

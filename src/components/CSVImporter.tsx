@@ -38,6 +38,7 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      dynamicTyping: false, // Important: désactiver le typage dynamique pour préserver les strings
       complete: (results) => {
         setIsProcessing(false);
         try {
@@ -75,25 +76,31 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             return;
           }
 
-          // Traiter les données
+          // Traiter les données - en conservant les chaînes pour les valeurs numériques
           const processedData = (results.data as any[]).map((row, index) => {
-            const totalVAT = 
-              (parseFloat(row["Commande.TotalTaxes"] || 0) + 
-              parseFloat(row["Livraison.MontantTVA"] || 0));
+            // Garder les valeurs sous forme de chaînes pour préserver TOUTES les décimales
+            const totalTaxes = row["Commande.TotalTaxes"] || "0";
+            const shippingVAT = row["Livraison.MontantTVA"] || "0";
+            
+            // Calculer totalVAT en préservant les chaînes (convertir uniquement pour l'addition puis reconvertir en chaîne)
+            const totalVAT = (
+              parseFloat(totalTaxes.toString().replace(',', '.')) + 
+              parseFloat(shippingVAT.toString().replace(',', '.'))
+            ).toString();
             
             return {
               id: `order-${index}`,
               date: row["Facture.Date"],
-              totalTaxes: parseFloat(row["Commande.TotalTaxes"] || 0),
-              shippingVAT: parseFloat(row["Livraison.MontantTVA"] || 0),
-              totalAmount: parseFloat(row["Commande.MontantTotal"] || 0),
+              totalTaxes: totalTaxes,
+              shippingVAT: shippingVAT,
+              totalAmount: row["Commande.MontantTotal"] || "0",
               company: row["Facturation.Société"] || "",
               vatNumber: row["Société.NII"] || "",
               totalVAT: totalVAT
             };
           });
 
-          console.log("Données traitées:", processedData.slice(0, 2));
+          console.log("Données traitées avec toutes les décimales:", processedData.slice(0, 2));
           onImportSuccess(processedData);
         } catch (err) {
           console.error("Erreur lors du traitement:", err);
