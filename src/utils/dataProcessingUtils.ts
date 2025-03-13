@@ -1,4 +1,3 @@
-
 import { OrderData } from "@/pages/Index";
 import { format, parse, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -130,25 +129,22 @@ export const filterData = (
   });
 };
 
-// Calculer les statistiques avec haute précision
+// Calculer les statistiques avec une précision maximale
 export const calculateStats = (filteredData: OrderData[]) => {
-  // Utiliser des calculs avec haute précision pour éviter les erreurs d'arrondi
+  // Utiliser des calculs de haute précision pour éviter les erreurs d'arrondi
   let total = 0;
   let totalVAT = 0;
   
   for (const order of filteredData) {
-    // S'assurer que nous travaillons avec des nombres précis
-    const orderAmount = parseFloat(order.totalAmount.toFixed(2));
-    const orderVAT = parseFloat(order.totalVAT.toFixed(2));
-    
-    total += orderAmount;
-    totalVAT += orderVAT;
+    // Ne pas arrondir les valeurs individuelles pendant le calcul
+    total += Number(order.totalAmount);
+    totalVAT += Number(order.totalVAT);
   }
   
-  // Calculer HT avec haute précision
-  const totalExcludingVAT = parseFloat((total - totalVAT).toFixed(2));
+  // Calculer HT avec précision
+  const totalExcludingVAT = total - totalVAT;
   
-  // Arrondir à 2 décimales pour l'affichage
+  // Arrondir uniquement pour l'affichage, avec 2 décimales
   return {
     total: total.toFixed(2),
     totalVAT: totalVAT.toFixed(2),

@@ -40,10 +40,10 @@ export function OrdersTable({ filteredData }: OrdersTableProps) {
               <TableCell>{order.company}</TableCell>
               <TableCell>{order.vatNumber || "-"}</TableCell>
               <TableCell className="text-right">
-                {formatCurrency(parseFloat((order.totalAmount - order.totalVAT).toFixed(2)))}
+                {formatCurrency(Number(order.totalAmount) - Number(order.totalVAT))}
               </TableCell>
-              <TableCell className="text-right">{formatCurrency(order.totalVAT)}</TableCell>
-              <TableCell className="text-right">{formatCurrency(order.totalAmount)}</TableCell>
+              <TableCell className="text-right">{formatCurrency(Number(order.totalVAT))}</TableCell>
+              <TableCell className="text-right">{formatCurrency(Number(order.totalAmount))}</TableCell>
             </TableRow>
           ))}
         </TableBody>
