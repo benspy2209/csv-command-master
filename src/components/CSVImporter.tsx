@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OrderData } from "@/pages/Index";
 import Papa from "papaparse";
 import { AlertCircle, FileWarning } from "lucide-react";
-import { cleanVATNumber } from "@/utils/dataProcessingUtils";
+import { cleanVATNumber, parseCommaNumber } from "@/utils/dataProcessingUtils";
 
 interface CSVImporterProps {
   onCancel: () => void;
@@ -24,13 +24,6 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
       setError(null);
       console.log("Fichier sélectionné:", e.target.files[0].name);
     }
-  };
-
-  // Fonction pour convertir une chaîne avec virgule en nombre
-  const parseCommaNumber = (value: string): number => {
-    if (!value || value.trim() === "") return 0;
-    // Remplacer la virgule par un point pour l'analyse numérique correcte
-    return parseFloat(value.replace(",", "."));
   };
 
   const processCSV = () => {
@@ -62,44 +55,59 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             return;
           }
 
-          const requiredColumns = [
-            "Facture.Date",
-            "Commande.TotalTaxes",
-            "Livraison.MontantTVA",
-            "Commande.MontantTotal",
-            "Facturation.Société",
-            "Société.NII"
-          ];
-
-          // Vérifier que toutes les colonnes requises sont présentes
+          // Get all headers from the file
           const headers = Object.keys(results.data[0] || {});
           console.log("En-têtes détectés:", headers);
           
-          const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+          // Define possible column mappings (multiple possible names for each required field)
+          const columnMappings = {
+            date: ["Facture.Date", "Date", "OrderDate", "InvoiceDate", "Date.Facture"],
+            totalTaxes: ["Commande.TotalTaxes", "TotalTaxes", "OrderTaxes", "Taxes"],
+            shippingVAT: ["Livraison.MontantTVA", "ShippingVAT", "LivraisonTVA", "TVA.Livraison"],
+            totalAmount: ["Commande.MontantTotal", "MontantTotal", "TotalAmount", "OrderTotal"],
+            company: ["Facturation.Société", "Société", "Company", "CompanyName", "Entreprise"],
+            vatNumber: ["Société.NII", "NII", "VATNumber", "NumeroTVA", "TVA"]
+          };
           
-          if (missingColumns.length > 0) {
-            console.error("Colonnes manquantes:", missingColumns);
-            setError(`Colonnes manquantes: ${missingColumns.join(", ")}`);
+          // Find the actual headers in the file that match our required fields
+          const fieldMappings: Record<string, string> = {};
+          let missingFields: string[] = [];
+          
+          // For each of our required fields
+          Object.entries(columnMappings).forEach(([fieldName, possibleNames]) => {
+            // Try to find a matching header in the CSV
+            const matchedHeader = possibleNames.find(name => headers.includes(name));
+            
+            if (matchedHeader) {
+              fieldMappings[fieldName] = matchedHeader;
+            } else {
+              missingFields.push(possibleNames[0]); // Add the primary name of the missing field
+            }
+          });
+          
+          if (missingFields.length > 0) {
+            console.error("Colonnes manquantes:", missingFields);
+            setError(`Colonnes manquantes: ${missingFields.join(", ")}`);
             return;
           }
 
-          // Traiter les données en gérant correctement les virgules pour les nombres
+          // Process the data using the mapped field names
           const processedData = (results.data as any[]).map((row, index) => {
-            const totalTaxes = parseCommaNumber(row["Commande.TotalTaxes"] || "0");
-            const shippingVAT = parseCommaNumber(row["Livraison.MontantTVA"] || "0");
-            const totalAmount = parseCommaNumber(row["Commande.MontantTotal"] || "0");
+            const totalTaxes = parseCommaNumber(row[fieldMappings.totalTaxes] || "0");
+            const shippingVAT = parseCommaNumber(row[fieldMappings.shippingVAT] || "0");
+            const totalAmount = parseCommaNumber(row[fieldMappings.totalAmount] || "0");
             const totalVAT = totalTaxes + shippingVAT;
             
             // Clean VAT number - remove spaces and dots
-            const cleanedVatNumber = cleanVATNumber(row["Société.NII"] || "");
+            const cleanedVatNumber = cleanVATNumber(row[fieldMappings.vatNumber] || "");
             
             return {
               id: `order-${index}`,
-              date: row["Facture.Date"],
+              date: row[fieldMappings.date],
               totalTaxes: totalTaxes,
               shippingVAT: shippingVAT,
               totalAmount: totalAmount,
-              company: row["Facturation.Société"] || "",
+              company: row[fieldMappings.company] || "",
               vatNumber: cleanedVatNumber,
               totalVAT: totalVAT
             };
@@ -148,6 +156,7 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             <p className="text-xs text-muted-foreground">
               Le fichier doit contenir les colonnes: Facture.Date, Commande.TotalTaxes, 
               Livraison.MontantTVA, Commande.MontantTotal, Facturation.Société, Société.NII
+              (ou des noms similaires pour ces données)
             </p>
           </div>
 
