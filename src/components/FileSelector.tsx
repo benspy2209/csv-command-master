@@ -29,9 +29,10 @@ export function FileSelector({ onFileChange, file }: FileSelectorProps) {
         className="cursor-pointer"
       />
       <p className="text-xs text-muted-foreground">
-        Le fichier doit contenir les colonnes: Facture.Date, 
-        Commande.TotalTaxes, Livraison.MontantTVA, Commande.MontantTotal, 
-        Facturation.Société, Société.NII (ou des noms similaires pour ces données)
+        Le fichier doit contenir les données de vos commandes avec des colonnes comme:
+        Commande.Date, Commande.MontantTotal, et les informations de client et TVA.
+        <br />
+        Le système reconnaît automatiquement plusieurs formats de données.
       </p>
       
       {file && (
