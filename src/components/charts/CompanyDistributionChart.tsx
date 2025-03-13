@@ -9,50 +9,56 @@ interface CompanyDistributionChartProps {
 }
 
 export function CompanyDistributionChart({ data }: CompanyDistributionChartProps) {
-  // Préparer les données par société
+  // Données pour le graphique circulaire (par société)
   const companyData = useMemo(() => {
+    // Si aucune donnée, créer une entrée par défaut
     if (data.length === 0) {
-      return [{ name: "Aucune donnée", value: 100 }];
+      return [{ name: "Aucune donnée", value: 100, percentage: "100%" }];
     }
     
-    // Calculer le total par société
     const companyMap = new Map<string, number>();
     
     data.forEach(order => {
-      const company = order.company 
+      const company = order.company && order.company.trim() !== "" 
         ? order.company 
         : "Non spécifié";
       
-      // Convertir le montant en nombre avec précision maximale
-      const orderAmount = parseFloat(String(order.totalAmount).replace(',', '.'));
-      
       const currentTotal = companyMap.get(company) || 0;
-      companyMap.set(company, currentTotal + orderAmount);
+      companyMap.set(company, currentTotal + order.totalAmount);
     });
     
     // Limiter à 5 sociétés + "Autres" pour éviter la surcharge du graphique
-    const sortedCompanies = Array.from(companyMap.entries())
+    const sortedEntries = Array.from(companyMap.entries())
       .sort((a, b) => b[1] - a[1]);
-    
-    const topCompanies = sortedCompanies.slice(0, 5);
-    
-    // Regrouper les autres sociétés
-    if (sortedCompanies.length > 5) {
-      const othersTotal = sortedCompanies
-        .slice(5)
-        .reduce((sum, [_, amount]) => sum + amount, 0);
       
-      if (othersTotal > 0) {
-        topCompanies.push(["Autres", othersTotal]);
-      }
+    const totalAmount = sortedEntries.reduce((sum, [_, value]) => sum + value, 0);
+    
+    if (sortedEntries.length <= 5) {
+      return sortedEntries.map(([name, value]) => ({ 
+        name, 
+        value,
+        percentage: `${Math.round((value / totalAmount) * 100)}%`
+      }));
     }
     
-    // Formater pour le graphique
-    return topCompanies.map(([name, value], index) => ({
-      name,
-      value,
-      fill: CHART_COLORS[index % CHART_COLORS.length]
-    }));
+    // Prendre les 4 premiers et regrouper le reste dans "Autres"
+    const topEntries = sortedEntries.slice(0, 4);
+    const othersValue = sortedEntries
+      .slice(4)
+      .reduce((sum, [, value]) => sum + value, 0);
+      
+    return [
+      ...topEntries.map(([name, value]) => ({ 
+        name, 
+        value,
+        percentage: `${Math.round((value / totalAmount) * 100)}%`
+      })),
+      { 
+        name: "Autres", 
+        value: othersValue,
+        percentage: `${Math.round((othersValue / totalAmount) * 100)}%`
+      }
+    ];
   }, [data]);
 
   // Vérifier si des données sont disponibles
@@ -69,25 +75,25 @@ export function CompanyDistributionChart({ data }: CompanyDistributionChartProps
                 data={companyData}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
+                labelLine={true}
                 outerRadius={90}
                 fill="#8884d8"
                 dataKey="value"
                 nameKey="name"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percentage }) => `${name}: ${percentage}`}
               >
                 {companyData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill || CHART_COLORS[index % CHART_COLORS.length]} />
+                  <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip 
                 formatter={(value) => formatCurrency(value as number)}
-                contentStyle={getTooltipStyle()} 
+                contentStyle={getTooltipStyle()}
               />
               <Legend 
                 layout="horizontal" 
                 verticalAlign="bottom" 
-                align="center" 
+                align="center"
                 formatter={(value) => <span style={{ fontSize: '12px' }}>{value}</span>}
               />
             </PieChart>

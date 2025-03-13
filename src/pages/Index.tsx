@@ -7,16 +7,16 @@ import { DataDisplay } from "@/components/DataDisplay";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { toast } from "@/components/ui/use-toast";
 
-// Types for our data model - updated to use strings for all numeric values to preserve decimals
+// Types for our data model
 export interface OrderData {
   id: string;
   date: string;
-  totalTaxes: string;
-  shippingVAT: string;
-  totalAmount: string;
+  totalTaxes: number;
+  shippingVAT: number;
+  totalAmount: number;
   company: string;
   vatNumber: string;
-  totalVAT: string;
+  totalVAT: number;
 }
 
 const Index = () => {

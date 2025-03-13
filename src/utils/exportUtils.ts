@@ -9,21 +9,14 @@ import "jspdf-autotable";
 export const exportToCSV = (filteredData: OrderData[], selectedMonth: string | null, showIntracomOnly: boolean) => {
   const headers = ['Date', 'Société', 'N° TVA', 'Montant HT', 'TVA', 'Montant Total'];
   
-  const csvData = filteredData.map(order => {
-    // Convertir les montants en nombre pour les calculs
-    const totalAmount = parseFloat(String(order.totalAmount).replace(',', '.'));
-    const totalVAT = parseFloat(String(order.totalVAT).replace(',', '.'));
-    const amountHT = totalAmount - totalVAT;
-    
-    return [
-      order.date,
-      order.company,
-      order.vatNumber,
-      amountHT.toFixed(2).replace('.', ','),
-      totalVAT.toFixed(2).replace('.', ','),
-      totalAmount.toFixed(2).replace('.', ',')
-    ];
-  });
+  const csvData = filteredData.map(order => [
+    order.date,
+    order.company,
+    order.vatNumber,
+    (order.totalAmount - order.totalVAT).toFixed(2),
+    order.totalVAT.toFixed(2),
+    order.totalAmount.toFixed(2)
+  ]);
   
   csvData.unshift(headers);
   
@@ -74,28 +67,19 @@ export const exportToPDF = (
   doc.text(`TVA totale: ${stats.totalVAT} €`, 14, 46);
   doc.text(`Montant total TTC: ${stats.total} €`, 14, 54);
   
-  // Préparation des données pour le tableau
-  const tableBody = filteredData.map(order => {
-    // Convertir les montants en nombre pour les calculs
-    const totalAmount = parseFloat(String(order.totalAmount).replace(',', '.'));
-    const totalVAT = parseFloat(String(order.totalVAT).replace(',', '.'));
-    const amountHT = totalAmount - totalVAT;
-    
-    return [
-      order.date,
-      order.company,
-      order.vatNumber,
-      `${amountHT.toFixed(2).replace('.', ',')} €`,
-      `${totalVAT.toFixed(2).replace('.', ',')} €`,
-      `${totalAmount.toFixed(2).replace('.', ',')} €`
-    ];
-  });
-  
+  // Tableau
   // @ts-ignore
   doc.autoTable({
     startY: 65,
     head: [['Date', 'Société', 'N° TVA', 'Montant HT', 'TVA', 'Total']],
-    body: tableBody,
+    body: filteredData.map(order => [
+      order.date,
+      order.company,
+      order.vatNumber,
+      `${(order.totalAmount - order.totalVAT).toFixed(2)} €`,
+      `${order.totalVAT.toFixed(2)} €`,
+      `${order.totalAmount.toFixed(2)} €`
+    ]),
     theme: 'striped',
     headStyles: { fillColor: [66, 139, 202] }
   });
