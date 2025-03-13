@@ -1,4 +1,3 @@
-
 import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
@@ -45,13 +44,11 @@ export function DataFilters({
   const [localMinAmount, setLocalMinAmount] = useState(minAmount?.toString() || "");
   const [localMaxAmount, setLocalMaxAmount] = useState(maxAmount?.toString() || "");
   
-  // Sync local state with props
   useEffect(() => {
     setLocalMinAmount(minAmount?.toString() || "");
     setLocalMaxAmount(maxAmount?.toString() || "");
   }, [minAmount, maxAmount]);
 
-  // Formater l'affichage du mois
   const formatMonth = (monthKey: string) => {
     try {
       const date = parse(monthKey, "yyyy-MM", new Date());
@@ -61,7 +58,6 @@ export function DataFilters({
     }
   };
 
-  // Réinitialiser tous les filtres
   const resetFilters = () => {
     onMonthChange(null);
     onIntracomChange(false);
@@ -72,7 +68,6 @@ export function DataFilters({
     setLocalMaxAmount("");
   };
 
-  // Appliquer les filtres de montant
   const applyAmountFilter = () => {
     const min = localMinAmount ? parseFloat(localMinAmount) : null;
     const max = localMaxAmount ? parseFloat(localMaxAmount) : null;
@@ -101,7 +96,6 @@ export function DataFilters({
             />
           </div>
           
-          {/* Period filter in main bar */}
           <Select 
             value={selectedMonth || "all"} 
             onValueChange={(value) => onMonthChange(value === "all" ? null : value)}

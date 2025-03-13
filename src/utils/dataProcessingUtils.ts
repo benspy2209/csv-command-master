@@ -1,18 +1,49 @@
 
 import { OrderData } from "@/pages/Index";
-import { format, parse } from "date-fns";
+import { format, parse, isValid, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
+
+// Fonction pour analyser différents formats de date possibles
+export const parseOrderDate = (dateString: string) => {
+  if (!dateString) return null;
+  
+  // Nettoyer la chaîne de date
+  const trimmedDate = dateString.trim();
+  
+  try {
+    // Pour le format "dd/MM/yyyy HH:mm:ss"
+    if (trimmedDate.match(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/)) {
+      const parsedDate = parse(trimmedDate, "dd/MM/yyyy HH:mm:ss", new Date());
+      if (isValid(parsedDate)) return parsedDate;
+    }
+    
+    // Pour le format "dd/MM/yyyy"
+    if (trimmedDate.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+      const parsedDate = parse(trimmedDate, "dd/MM/yyyy", new Date());
+      if (isValid(parsedDate)) return parsedDate;
+    }
+    
+    // Essayer de parser comme ISO si les autres formats échouent
+    const isoDate = parseISO(trimmedDate);
+    if (isValid(isoDate)) return isoDate;
+    
+    console.error("Format de date non reconnu:", trimmedDate);
+    return null;
+  } catch (e) {
+    console.error("Erreur d'analyse de date:", e, trimmedDate);
+    return null;
+  }
+};
 
 // Fonction pour générer une liste unique de mois à partir des données
 export const getUniqueMonths = (data: OrderData[]) => {
   const months = new Set<string>();
   
   data.forEach(order => {
-    try {
-      const date = parse(order.date, "dd/MM/yyyy", new Date());
+    const date = parseOrderDate(order.date);
+    if (date) {
       const monthKey = format(date, "yyyy-MM");
       months.add(monthKey);
-    } catch (e) {
-      // Ignorer les dates invalides
     }
   });
   
@@ -47,13 +78,13 @@ export const filterData = (
     
     // Filtre par mois
     if (selectedMonth) {
-      try {
-        const date = parse(order.date, "dd/MM/yyyy", new Date());
+      const date = parseOrderDate(order.date);
+      if (date) {
         const orderMonth = format(date, "yyyy-MM");
         if (orderMonth !== selectedMonth) {
           keepItem = false;
         }
-      } catch {
+      } else {
         keepItem = false;
       }
     }
