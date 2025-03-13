@@ -3,7 +3,7 @@ import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { FilterX, Filter, Search } from "lucide-react";
+import { FilterX, Filter, Search, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -101,6 +101,25 @@ export function DataFilters({
             />
           </div>
           
+          {/* Period filter in main bar */}
+          <Select 
+            value={selectedMonth || "all"} 
+            onValueChange={(value) => onMonthChange(value === "all" ? null : value)}
+          >
+            <SelectTrigger className="h-9 w-auto md:w-48">
+              <Calendar className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Tous les mois" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les mois</SelectItem>
+              {months.map(month => (
+                <SelectItem key={month} value={month}>
+                  {formatMonth(month)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
           <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="outline" size="sm" className="h-9">
@@ -111,7 +130,7 @@ export function DataFilters({
             <CollapsibleContent>
               <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
                 <div className="space-y-2">
-                  <Label>Période</Label>
+                  <Label>Période détaillée</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {months.map(month => (
                       <Button
