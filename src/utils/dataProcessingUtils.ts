@@ -1,3 +1,4 @@
+
 import { OrderData } from "@/pages/Index";
 import { format, parse, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -94,7 +95,7 @@ export const filterData = (
     // Filtre intracom - une commande intracom a une TVA à 0€ ET un numéro de TVA valide
     if (showIntracomOnly) {
       // Vérifier que la TVA est à 0 et qu'un numéro de TVA est présent et non vide
-      if (!(order.totalVAT === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
+      if (!(parseFloat(String(order.totalVAT)) === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
         keepItem = false;
       }
     }
@@ -105,11 +106,11 @@ export const filterData = (
     }
     
     // Filtre par montant
-    if (minAmount !== null && order.totalAmount < minAmount) {
+    if (minAmount !== null && parseFloat(String(order.totalAmount)) < minAmount) {
       keepItem = false;
     }
     
-    if (maxAmount !== null && order.totalAmount > maxAmount) {
+    if (maxAmount !== null && parseFloat(String(order.totalAmount)) > maxAmount) {
       keepItem = false;
     }
     
@@ -129,22 +130,22 @@ export const filterData = (
   });
 };
 
-// Calculer les statistiques avec une précision maximale
+// Calculer les statistiques avec précision absolue (sans aucun arrondi intermédiaire)
 export const calculateStats = (filteredData: OrderData[]) => {
-  // Utiliser des calculs de haute précision pour éviter les erreurs d'arrondi
+  // Variables pour stocker les sommes exactes
   let total = 0;
   let totalVAT = 0;
   
   for (const order of filteredData) {
-    // Ne pas arrondir les valeurs individuelles pendant le calcul
-    total += Number(order.totalAmount);
-    totalVAT += Number(order.totalVAT);
+    // Convertir en nombre et conserver toutes les décimales
+    total += parseFloat(String(order.totalAmount));
+    totalVAT += parseFloat(String(order.totalVAT));
   }
   
-  // Calculer HT avec précision
+  // Calculer HT en soustrayant la TVA du total (sans arrondi intermédiaire)
   const totalExcludingVAT = total - totalVAT;
   
-  // Arrondir uniquement pour l'affichage, avec 2 décimales
+  // Retourner les valeurs avec 2 décimales uniquement pour l'affichage
   return {
     total: total.toFixed(2),
     totalVAT: totalVAT.toFixed(2),

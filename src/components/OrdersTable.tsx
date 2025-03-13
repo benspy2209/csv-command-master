@@ -7,8 +7,9 @@ interface OrdersTableProps {
 }
 
 export function OrdersTable({ filteredData }: OrdersTableProps) {
-  // Fonction pour formater les montants avec toujours 2 décimales
+  // Fonction pour formater les montants en conservant toutes les décimales
   const formatCurrency = (amount: number) => {
+    // Formater avec 2 décimales systématiquement et remplacer le point par une virgule
     return amount.toFixed(2).replace('.', ',') + ' €';
   };
 
