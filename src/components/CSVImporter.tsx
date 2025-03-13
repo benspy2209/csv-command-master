@@ -25,6 +25,13 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
     }
   };
 
+  // Fonction pour convertir une chaîne avec virgule en nombre
+  const parseCommaNumber = (value: string): number => {
+    if (!value || value.trim() === "") return 0;
+    // Remplacer la virgule par un point pour l'analyse numérique correcte
+    return parseFloat(value.replace(",", "."));
+  };
+
   const processCSV = () => {
     if (!file) {
       setError("Veuillez sélectionner un fichier");
@@ -75,18 +82,19 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             return;
           }
 
-          // Traiter les données
+          // Traiter les données en gérant correctement les virgules pour les nombres
           const processedData = (results.data as any[]).map((row, index) => {
-            const totalVAT = 
-              (parseFloat(row["Commande.TotalTaxes"] || 0) + 
-              parseFloat(row["Livraison.MontantTVA"] || 0));
+            const totalTaxes = parseCommaNumber(row["Commande.TotalTaxes"] || "0");
+            const shippingVAT = parseCommaNumber(row["Livraison.MontantTVA"] || "0");
+            const totalAmount = parseCommaNumber(row["Commande.MontantTotal"] || "0");
+            const totalVAT = totalTaxes + shippingVAT;
             
             return {
               id: `order-${index}`,
               date: row["Facture.Date"],
-              totalTaxes: parseFloat(row["Commande.TotalTaxes"] || 0),
-              shippingVAT: parseFloat(row["Livraison.MontantTVA"] || 0),
-              totalAmount: parseFloat(row["Commande.MontantTotal"] || 0),
+              totalTaxes: totalTaxes,
+              shippingVAT: shippingVAT,
+              totalAmount: totalAmount,
               company: row["Facturation.Société"] || "",
               vatNumber: row["Société.NII"] || "",
               totalVAT: totalVAT

@@ -13,9 +13,9 @@ export const exportToCSV = (filteredData: OrderData[], selectedMonth: string | n
     order.date,
     order.company,
     order.vatNumber,
-    (order.totalAmount - order.totalVAT).toFixed(2),
-    order.totalVAT.toFixed(2),
-    order.totalAmount.toFixed(2)
+    (order.totalAmount - order.totalVAT).toFixed(2).replace('.', ','),
+    order.totalVAT.toFixed(2).replace('.', ','),
+    order.totalAmount.toFixed(2).replace('.', ',')
   ]);
   
   csvData.unshift(headers);
@@ -63,9 +63,9 @@ export const exportToPDF = (
   // Statistiques
   doc.setFontSize(12);
   doc.text(`Nombre de commandes: ${stats.orderCount}`, 14, 30);
-  doc.text(`Montant total HT: ${stats.totalExcludingVAT} €`, 14, 38);
-  doc.text(`TVA totale: ${stats.totalVAT} €`, 14, 46);
-  doc.text(`Montant total TTC: ${stats.total} €`, 14, 54);
+  doc.text(`Montant total HT: ${stats.totalExcludingVAT.replace('.', ',')} €`, 14, 38);
+  doc.text(`TVA totale: ${stats.totalVAT.replace('.', ',')} €`, 14, 46);
+  doc.text(`Montant total TTC: ${stats.total.replace('.', ',')} €`, 14, 54);
   
   // Tableau
   // @ts-ignore
@@ -76,9 +76,9 @@ export const exportToPDF = (
       order.date,
       order.company,
       order.vatNumber,
-      `${(order.totalAmount - order.totalVAT).toFixed(2)} €`,
-      `${order.totalVAT.toFixed(2)} €`,
-      `${order.totalAmount.toFixed(2)} €`
+      `${(order.totalAmount - order.totalVAT).toFixed(2).replace('.', ',')} €`,
+      `${order.totalVAT.toFixed(2).replace('.', ',')} €`,
+      `${order.totalAmount.toFixed(2).replace('.', ',')} €`
     ]),
     theme: 'striped',
     headStyles: { fillColor: [66, 139, 202] }

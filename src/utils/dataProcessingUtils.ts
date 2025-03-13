@@ -66,6 +66,14 @@ export const getUniqueCompanies = (data: OrderData[]) => {
   return Array.from(companies).sort();
 };
 
+// Fonction pour convertir une chaîne avec virgule en nombre
+const parseCommaNumber = (value: string | number): number => {
+  if (typeof value === 'number') return value;
+  if (!value || value.trim() === "") return 0;
+  // Remplacer la virgule par un point pour l'analyse numérique correcte
+  return parseFloat(value.replace(",", "."));
+};
+
 // Filtrer les données selon les critères
 export const filterData = (
   data: OrderData[], 
@@ -95,7 +103,7 @@ export const filterData = (
     // Filtre intracom - une commande intracom a une TVA à 0€ ET un numéro de TVA valide
     if (showIntracomOnly) {
       // Vérifier que la TVA est à 0 et qu'un numéro de TVA est présent et non vide
-      if (!(parseFloat(String(order.totalVAT)) === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
+      if (!(order.totalVAT === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
         keepItem = false;
       }
     }
@@ -106,11 +114,11 @@ export const filterData = (
     }
     
     // Filtre par montant
-    if (minAmount !== null && parseFloat(String(order.totalAmount)) < minAmount) {
+    if (minAmount !== null && order.totalAmount < minAmount) {
       keepItem = false;
     }
     
-    if (maxAmount !== null && parseFloat(String(order.totalAmount)) > maxAmount) {
+    if (maxAmount !== null && order.totalAmount > maxAmount) {
       keepItem = false;
     }
     
@@ -137,15 +145,15 @@ export const calculateStats = (filteredData: OrderData[]) => {
   let totalVAT = 0;
   
   for (const order of filteredData) {
-    // Convertir en nombre et conserver toutes les décimales
-    total += parseFloat(String(order.totalAmount));
-    totalVAT += parseFloat(String(order.totalVAT));
+    // Convertir en nombre
+    total += order.totalAmount;
+    totalVAT += order.totalVAT;
   }
   
-  // Calculer HT en soustrayant la TVA du total (sans arrondi intermédiaire)
+  // Calculer HT en soustrayant la TVA du total
   const totalExcludingVAT = total - totalVAT;
   
-  // Retourner les valeurs avec 2 décimales uniquement pour l'affichage
+  // Retourner les valeurs avec 2 décimales pour l'affichage
   return {
     total: total.toFixed(2),
     totalVAT: totalVAT.toFixed(2),

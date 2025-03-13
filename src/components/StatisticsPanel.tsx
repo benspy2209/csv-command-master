@@ -11,10 +11,10 @@ interface StatisticsPanelProps {
 }
 
 export function StatisticsPanel({ stats }: StatisticsPanelProps) {
-  // Fonction pour formater les montants en préservant toutes les décimales
+  // Fonction pour formater les montants en utilisant la virgule comme séparateur décimal
   const formatCurrency = (amount: string) => {
-    // Conserver précisément le montant à 2 décimales et utiliser la virgule
-    return parseFloat(amount).toFixed(2).replace('.', ',') + ' €';
+    // Conserver précisément le montant à 2 décimales et utiliser la virgule comme séparateur
+    return parseFloat(amount.replace(',', '.')).toFixed(2).replace('.', ',') + ' €';
   };
 
   return (
