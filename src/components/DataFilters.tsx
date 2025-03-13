@@ -1,3 +1,4 @@
+
 import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
@@ -114,6 +115,20 @@ export function DataFilters({
             </SelectContent>
           </Select>
           
+          <div className="flex items-center space-x-2 bg-background rounded-md px-3 py-1 border">
+            <Checkbox 
+              id="intracom-main" 
+              checked={showIntracomOnly}
+              onCheckedChange={(checked) => onIntracomChange(checked === true)}
+            />
+            <label
+              htmlFor="intracom-main"
+              className="text-sm font-medium leading-none cursor-pointer"
+            >
+              Intracom uniquement
+            </label>
+          </div>
+          
           <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="outline" size="sm" className="h-9">
@@ -187,21 +202,8 @@ export function DataFilters({
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="intracom" 
-                      checked={showIntracomOnly}
-                      onCheckedChange={(checked) => onIntracomChange(checked === true)}
-                    />
-                    <label
-                      htmlFor="intracom"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      Afficher uniquement les commandes intracom
-                    </label>
-                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Commandes avec TVA à 0€ et numéro de TVA renseigné
+                    Commandes intracom : TVA à 0€ et numéro de TVA renseigné
                   </p>
                 </div>
               </div>
