@@ -39,11 +39,11 @@ export const fixEncodingIssues = (text: string): string => {
     'Ã¼': 'ü',
     'Ã§': 'ç',
     'â‚¬': '€',
-    'â€™': ''',
-    'â€"': '–',
-    'â€"': '—',
-    'â€œ': '"',
-    'â€': '"',
+    "â€™": "'", // Fixed: Using double quotes to escape the single quote
+    "â€"": "–",
+    "â€"": "—",
+    "â€œ": '"',
+    "â€": '"',
     'Å"': 'œ',
     'Â': '',      // Souvent un caractère parasite
     '�': '',      // Caractère de remplacement Unicode
