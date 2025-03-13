@@ -20,3 +20,35 @@ export const normalizeText = (text: string): string => {
   // puis en les recomposant avec la forme normalisée
   return text.normalize("NFD").normalize("NFC");
 };
+
+// Fonction pour détecter les colonnes liées aux entreprises
+export const isCompanyRelatedColumn = (columnName: string): boolean => {
+  if (!columnName) return false;
+  
+  const normalizedColumn = normalizeText(columnName.toLowerCase());
+  
+  // Liste de termes liés aux noms d'entreprise en français et en anglais
+  const companyTerms = [
+    "societe", "société", "company", "entreprise", "organisation", "organization",
+    "client", "customer", "business", "firme", "corporation", "raison sociale",
+    "nom commercial", "établissement", "etablissement"
+  ];
+  
+  return companyTerms.some(term => normalizedColumn.includes(term));
+};
+
+// Fonction pour détecter les colonnes liées aux numéros de TVA/NII
+export const isVATNumberRelatedColumn = (columnName: string): boolean => {
+  if (!columnName) return false;
+  
+  const normalizedColumn = normalizeText(columnName.toLowerCase());
+  
+  // Liste de termes liés aux numéros de TVA en français et en anglais
+  const vatTerms = [
+    "tva", "vat", "nii", "numero tva", "numéro tva", "tax number", "tax id",
+    "numero fiscal", "numéro fiscal", "id fiscal", "identifiant fiscal",
+    "siret", "siren", "no tva", "n° tva", "no vat", "n° vat"
+  ];
+  
+  return vatTerms.some(term => normalizedColumn.includes(term));
+};

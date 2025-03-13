@@ -6,7 +6,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OrderData } from "@/pages/Index";
 import Papa from "papaparse";
 import { AlertCircle, FileWarning } from "lucide-react";
-import { cleanVATNumber, parseCommaNumber } from "@/utils/dataProcessingUtils";
+import { 
+  cleanVATNumber, 
+  parseCommaNumber, 
+  normalizeText,
+  isCompanyRelatedColumn,
+  isVATNumberRelatedColumn
+} from "@/utils/formatUtils";
 
 interface CSVImporterProps {
   onCancel: () => void;
@@ -24,14 +30,6 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
       setError(null);
       console.log("Fichier sélectionné:", e.target.files[0].name);
     }
-  };
-
-  // Fonction pour normaliser les caractères accentués et spéciaux
-  const normalizeString = (str: string): string => {
-    if (!str) return "";
-    // Normalise la chaîne en décomposant les caractères accentués
-    // puis en les recomposant avec la forme normalisée
-    return str.normalize("NFD").normalize("NFC");
   };
 
   const processCSV = () => {
@@ -65,40 +63,52 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
           }
 
           // Get all headers from the file and normalize them to fix encoding issues
-          const headers = Object.keys(results.data[0] || {}).map(header => normalizeString(header));
+          const rawHeaders = Object.keys(results.data[0] || {});
+          const headers = rawHeaders.map(header => normalizeText(header));
           console.log("En-têtes détectés:", headers);
           
           // Define possible column mappings (multiple possible names for each required field)
           const columnMappings = {
             date: [
               "Facture.Date", "Date", "OrderDate", "InvoiceDate", "Date.Facture",
-              "Commande.Date", "DateFacture", "Invoice.Date", "Order.Date"
+              "Commande.Date", "DateFacture", "Invoice.Date", "Order.Date",
+              "Date.Commande", "Date.Order", "Date.Invoice", "DateFacturation"
             ],
             totalTaxes: [
               "Commande.TotalTaxes", "TotalTaxes", "OrderTaxes", "Taxes", 
-              "MontantTaxes", "Commande.MontantTaxes", "Taxes.Total", "Montant.Taxes"
+              "MontantTaxes", "Commande.MontantTaxes", "Taxes.Total", "Montant.Taxes",
+              "Total.Taxes", "Taxes.Montant", "Montant.TVA", "TVA.Total"
             ],
             shippingVAT: [
               "Livraison.MontantTVA", "ShippingVAT", "LivraisonTVA", "TVA.Livraison",
-              "Livraison.TVA", "TVALivraison", "Shipping.VAT", "DeliveryVAT"
+              "Livraison.TVA", "TVALivraison", "Shipping.VAT", "DeliveryVAT",
+              "Frais.Livraison.TVA", "Shipping.Tax", "Tax.Shipping"
             ],
             totalAmount: [
               "Commande.MontantTotal", "MontantTotal", "TotalAmount", "OrderTotal",
-              "Total", "Montant", "Commande.Total", "Order.Amount", "Total.Order"
+              "Total", "Montant", "Commande.Total", "Order.Amount", "Total.Order",
+              "Montant.Commande", "Commande.Montant", "Total.Montant", "Amount.Total"
             ],
             company: [
               "Facturation.Société", "Société", "Company", "CompanyName", "Entreprise",
               "Facturation.Entreprise", "Facturation.Company", "Client.Société",
               "Société", "Facturation.Société", "Client.Société", "Client.Company",
               // Inclure des variantes pour tenir compte des problèmes d'encodage
-              "Societe", "Facturation.Societe", "Client.Societe"
+              "Societe", "Facturation.Societe", "Client.Societe", "NomEntreprise",
+              "Nom.Entreprise", "RaisonSociale", "Raison.Sociale", "Nom.Societe",
+              "BusinessName", "Client.Name", "Customer.Company", "Client.BusinessName",
+              "Nom.Commercial", "Etablissement", "Nom.Etablissement"
             ],
             vatNumber: [
               "Société.NII", "NII", "VATNumber", "NumeroTVA", "TVA", "VAT",
               "NumTVA", "Société.NII", "Société.TVA", "Company.VAT", "Company.VATNumber",
               "NoTVA", "Numero.TVA", "Société.TVA", "Société.NumTVA", "TVA.Numero",
               // Inclure des variantes pour tenir compte des problèmes d'encodage
-              "Societe.NII", "Societe.TVA", "Societe.NumTVA"
+              "Societe.NII", "Societe.TVA", "Societe.NumTVA", "NumeroTVA",
+              "NumeroFiscal", "IdentifiantTVA", "Identifiant.TVA", "Identifiant.Fiscal",
+              "SIRET", "SIREN", "Societe.SIRET", "Societe.SIREN", "Société.SIRET",
+              "Company.TaxID", "TaxID", "Tax.Number", "Numero.Fiscal", "ID.Fiscal",
+              "Client.TVA", "Client.NumTVA", "Customer.VATNumber"
             ]
           };
           
@@ -109,31 +119,61 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
           // Pour chaque champ requis, normaliser tous les noms possibles
           const normalizedColumnMappings: Record<string, string[]> = {};
           Object.entries(columnMappings).forEach(([fieldName, possibleNames]) => {
-            normalizedColumnMappings[fieldName] = possibleNames.map(name => normalizeString(name));
+            normalizedColumnMappings[fieldName] = possibleNames.map(name => normalizeText(name).toLowerCase());
           });
           
           // For each of our required fields
           Object.entries(normalizedColumnMappings).forEach(([fieldName, normalizedPossibleNames]) => {
             // Check if any of the possible column names exist in the headers
-            const normalizedHeaders = headers.map(header => normalizeString(header));
+            const normalizedHeaders = headers.map(header => normalizeText(header).toLowerCase());
+            const rawHeadersLower = rawHeaders.map(header => header.toLowerCase());
             
             // Essaie de trouver un match en utilisant une comparaison insensible à la casse
-            const matchIndex = normalizedPossibleNames.findIndex(name => 
-              normalizedHeaders.some(header => header.toLowerCase() === name.toLowerCase())
+            let matchIndex = normalizedPossibleNames.findIndex(name => 
+              normalizedHeaders.some(header => header === name || header.includes(name))
             );
             
             if (matchIndex !== -1) {
               // Trouver l'en-tête exact tel qu'il apparaît dans le fichier
               const matchedNormalizedName = normalizedPossibleNames[matchIndex];
               const headerIndex = normalizedHeaders.findIndex(
-                header => header.toLowerCase() === matchedNormalizedName.toLowerCase()
+                header => header === matchedNormalizedName || header.includes(matchedNormalizedName)
               );
               
               if (headerIndex !== -1) {
-                fieldMappings[fieldName] = Object.keys(results.data[0] || {})[headerIndex];
+                fieldMappings[fieldName] = rawHeaders[headerIndex];
                 console.log(`Mapping trouvé pour ${fieldName}: ${fieldMappings[fieldName]}`);
               }
-            } else {
+            } 
+            // Si aucun match direct, essayons une approche plus flexible pour les champs spécifiques
+            else if (fieldName === 'company' || fieldName === 'vatNumber') {
+              // Pour company et vatNumber, on utilise une approche plus heuristique
+              const isRelatedColumn = fieldName === 'company' 
+                ? isCompanyRelatedColumn 
+                : isVATNumberRelatedColumn;
+                
+              // Chercher une colonne qui contient des termes liés
+              const relatedColumnIndex = rawHeaders.findIndex(header => 
+                isRelatedColumn(normalizeText(header))
+              );
+              
+              if (relatedColumnIndex !== -1) {
+                fieldMappings[fieldName] = rawHeaders[relatedColumnIndex];
+                console.log(`Mapping heuristique trouvé pour ${fieldName}: ${fieldMappings[fieldName]}`);
+              } else {
+                // Si company ou vatNumber manquent, on crée des valeurs fictives pour éviter le blocage
+                if (fieldName === 'company') {
+                  console.warn("Aucune colonne d'entreprise trouvée, utilisation de valeurs par défaut");
+                  fieldMappings[fieldName] = "__company__"; // Marqueur spécial
+                } else if (fieldName === 'vatNumber') {
+                  console.warn("Aucune colonne de TVA trouvée, utilisation de valeurs par défaut");
+                  fieldMappings[fieldName] = "__vatNumber__"; // Marqueur spécial
+                }
+              }
+            }
+            
+            // Si toujours pas de mapping et ce n'est pas company ou vatNumber
+            if (!fieldMappings[fieldName] && fieldName !== 'company' && fieldName !== 'vatNumber') {
               missingFields.push(columnMappings[fieldName][0]); // Add the primary name of the missing field
             }
           });
@@ -146,16 +186,26 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
 
           // Process the data using the mapped field names and handle encoding issues
           const processedData = (results.data as any[]).map((row, index) => {
-            // Normalize the company name and other text fields to fix encoding issues
-            const companyName = normalizeString(row[fieldMappings.company] || "");
+            // Utilisez une valeur par défaut si company n'est pas trouvé
+            let companyName = "__company__";
+            if (fieldMappings.company === "__company__") {
+              companyName = `Client ${index + 1}`; // Valeur par défaut numérotée
+            } else {
+              companyName = normalizeText(row[fieldMappings.company] || "");
+            }
             
             const totalTaxes = parseCommaNumber(row[fieldMappings.totalTaxes] || "0");
             const shippingVAT = parseCommaNumber(row[fieldMappings.shippingVAT] || "0");
             const totalAmount = parseCommaNumber(row[fieldMappings.totalAmount] || "0");
             const totalVAT = totalTaxes + shippingVAT;
             
-            // Clean VAT number - remove spaces and dots
-            const cleanedVatNumber = cleanVATNumber(row[fieldMappings.vatNumber] || "");
+            // Utilisez une valeur par défaut si vatNumber n'est pas trouvé
+            let vatNumber = "__vatNumber__";
+            if (fieldMappings.vatNumber === "__vatNumber__") {
+              vatNumber = `TVA${index + 1}`; // Valeur par défaut numérotée
+            } else {
+              vatNumber = cleanVATNumber(row[fieldMappings.vatNumber] || "");
+            }
             
             return {
               id: `order-${index}`,
@@ -164,7 +214,7 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
               shippingVAT: shippingVAT,
               totalAmount: totalAmount,
               company: companyName,
-              vatNumber: cleanedVatNumber,
+              vatNumber: vatNumber,
               totalVAT: totalVAT
             };
           });
