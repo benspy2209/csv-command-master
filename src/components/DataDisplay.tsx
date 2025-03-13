@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -64,9 +65,10 @@ export function DataDisplay({ data }: DataDisplayProps) {
         }
       }
       
-      // Filtre intracom
+      // Filtre intracom - une commande intracom a une TVA à 0€ ET un numéro de TVA valide
       if (showIntracomOnly) {
-        if (order.totalVAT !== 0 || !order.vatNumber) {
+        // Vérifier que la TVA est à 0 et qu'un numéro de TVA est présent et non vide
+        if (!(order.totalVAT === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
           keepItem = false;
         }
       }
