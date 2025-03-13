@@ -1,11 +1,9 @@
-
 import { useState, useMemo } from "react";
 import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import { OrderData } from "@/pages/Index";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { DataVisualization } from "@/components/DataVisualization";
 import { DataFilters } from "@/components/DataFilters";
@@ -199,6 +197,47 @@ export function DataDisplay({ data }: DataDisplayProps) {
             <TabsTrigger value="table">Tableau</TabsTrigger>
             <TabsTrigger value="charts">Graphiques</TabsTrigger>
           </TabsList>
+        
+          <TabsContent value="table" className="mt-4">
+            {filteredData.length > 0 ? (
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Société</TableHead>
+                      <TableHead>N° TVA</TableHead>
+                      <TableHead className="text-right">Montant HT</TableHead>
+                      <TableHead className="text-right">TVA</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredData.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell>{order.date}</TableCell>
+                        <TableCell>{order.company}</TableCell>
+                        <TableCell>{order.vatNumber || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          {(order.totalAmount - order.totalVAT).toFixed(2)} €
+                        </TableCell>
+                        <TableCell className="text-right">{order.totalVAT.toFixed(2)} €</TableCell>
+                        <TableCell className="text-right">{order.totalAmount.toFixed(2)} €</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center p-8 border rounded-md">
+                <p className="text-muted-foreground">Aucune donnée pour la période sélectionnée</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="charts" className="mt-4">
+            <DataVisualization data={filteredData} />
+          </TabsContent>
         </Tabs>
         
         <div className="flex gap-2">
@@ -212,47 +251,6 @@ export function DataDisplay({ data }: DataDisplayProps) {
           </Button>
         </div>
       </div>
-
-      <TabsContent value="table" className="mt-0">
-        {filteredData.length > 0 ? (
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Société</TableHead>
-                  <TableHead>N° TVA</TableHead>
-                  <TableHead className="text-right">Montant HT</TableHead>
-                  <TableHead className="text-right">TVA</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredData.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>{order.date}</TableCell>
-                    <TableCell>{order.company}</TableCell>
-                    <TableCell>{order.vatNumber || "-"}</TableCell>
-                    <TableCell className="text-right">
-                      {(order.totalAmount - order.totalVAT).toFixed(2)} €
-                    </TableCell>
-                    <TableCell className="text-right">{order.totalVAT.toFixed(2)} €</TableCell>
-                    <TableCell className="text-right">{order.totalAmount.toFixed(2)} €</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <div className="text-center p-8 border rounded-md">
-            <p className="text-muted-foreground">Aucune donnée pour la période sélectionnée</p>
-          </div>
-        )}
-      </TabsContent>
-      
-      <TabsContent value="charts" className="mt-0">
-        <DataVisualization data={filteredData} />
-      </TabsContent>
     </div>
   );
 }
