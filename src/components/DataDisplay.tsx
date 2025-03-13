@@ -7,7 +7,12 @@ import { DataFilters } from "@/components/DataFilters";
 import { OrdersTable } from "@/components/OrdersTable";
 import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { ExportButtons } from "@/components/ExportButtons";
-import { getUniqueMonths, filterData, calculateStats } from "@/utils/dataProcessingUtils";
+import { 
+  getUniqueMonths, 
+  getUniqueCompanies, 
+  filterData, 
+  calculateStats 
+} from "@/utils/dataProcessingUtils";
 
 interface DataDisplayProps {
   data: OrderData[];
@@ -16,9 +21,14 @@ interface DataDisplayProps {
 export function DataDisplay({ data }: DataDisplayProps) {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [showIntracomOnly, setShowIntracomOnly] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [minAmount, setMinAmount] = useState<number | null>(null);
+  const [maxAmount, setMaxAmount] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("table");
   
   const months = useMemo(() => getUniqueMonths(data), [data]);
+  const companies = useMemo(() => getUniqueCompanies(data), [data]);
   
   // Sélectionner le mois le plus récent par défaut
   useMemo(() => {
@@ -27,10 +37,24 @@ export function DataDisplay({ data }: DataDisplayProps) {
     }
   }, [months, selectedMonth]);
 
+  // Gérer les changements de montant
+  const handleAmountChange = (min: number | null, max: number | null) => {
+    setMinAmount(min);
+    setMaxAmount(max);
+  };
+
   // Filtrer les données selon les critères
   const filteredData = useMemo(() => 
-    filterData(data, selectedMonth, showIntracomOnly), 
-    [data, selectedMonth, showIntracomOnly]
+    filterData(
+      data, 
+      selectedMonth, 
+      showIntracomOnly,
+      selectedCompany,
+      minAmount,
+      maxAmount,
+      searchTerm
+    ), 
+    [data, selectedMonth, showIntracomOnly, selectedCompany, minAmount, maxAmount, searchTerm]
   );
 
   // Calculer les statistiques
@@ -47,6 +71,14 @@ export function DataDisplay({ data }: DataDisplayProps) {
         onMonthChange={setSelectedMonth}
         showIntracomOnly={showIntracomOnly}
         onIntracomChange={setShowIntracomOnly}
+        companies={companies}
+        selectedCompany={selectedCompany}
+        onCompanyChange={setSelectedCompany}
+        minAmount={minAmount}
+        maxAmount={maxAmount}
+        onAmountChange={handleAmountChange}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
       />
       
       <StatisticsPanel stats={stats} />
