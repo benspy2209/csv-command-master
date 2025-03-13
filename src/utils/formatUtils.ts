@@ -17,38 +17,62 @@ export const parseCommaNumber = (value: string | number): number => {
 export const normalizeText = (text: string): string => {
   if (!text) return "";
   
-  // Remplacer les caractères mal encodés les plus courants
+  // We need to use unique keys for each mapping
+  // Using Unicode code points to differentiate identical-looking characters
   const replacements: Record<string, string> = {
+    '\u00E9': 'é', // é
+    '\u00E8': 'è', // è
+    '\u00EA': 'ê', // ê
+    '\u00EB': 'ë', // ë
+    '\u00E0': 'à', // à
+    '\u00E2': 'â', // â
+    '\u00F4': 'ô', // ô
+    '\u00EE': 'î', // î
+    '\u00EF': 'ï', // ï
+    '\u00FC': 'ü', // ü
+    '\u00F9': 'ù', // ù
+    '\u00E7': 'ç', // ç
+    '\u00C9': 'É', // É
+    '\u00C8': 'È', // È
+    '\u00CA': 'Ê', // Ê
+    '\u00CB': 'Ë', // Ë
+    '\u00C0': 'À', // À
+    '\u00C2': 'Â', // Â
+    '\u00D4': 'Ô', // Ô
+    '\u00CE': 'Î', // Î
+    '\u00CF': 'Ï', // Ï
+    '\u00DC': 'Ü', // Ü
+    '\u00D9': 'Ù', // Ù
+    '\u00C7': 'Ç'  // Ç
+  };
+
+  // Also handle specific character encoding issues seen in real data
+  const encodingIssueReplacements: Record<string, string> = {
+    // Common ISO-8859-1 or Windows-1252 mis-encoded characters
     '�': 'é',
     '�': 'è',
+    '�': 'à',
+    '�': 'ç',
     '�': 'ê',
     '�': 'ë',
-    '�': 'à',
-    '�': 'â',
-    '�': 'ô',
     '�': 'î',
     '�': 'ï',
-    '�': 'ü',
+    '�': 'ô',
     '�': 'ù',
-    '�': 'ç',
-    '�': 'É',
-    '�': 'È',
-    '�': 'Ê',
-    '�': 'Ë',
-    '�': 'À',
-    '�': 'Â',
-    '�': 'Ô',
-    '�': 'Î',
-    '�': 'Ï',
-    '�': 'Ü',
-    '�': 'Ù',
-    '�': 'Ç'
+    '�': 'û',
+    '�': 'ü'
   };
 
   let result = text;
-  // Remplacer les caractères problématiques
+  
+  // Replace encoding issues first
+  Object.entries(encodingIssueReplacements).forEach(([badChar, goodChar]) => {
+    result = result.replace(new RegExp(badChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), goodChar);
+  });
+  
+  // Then normalize Unicode characters
   Object.entries(replacements).forEach(([badChar, goodChar]) => {
-    result = result.replace(new RegExp(badChar, 'g'), goodChar);
+    result = result.replace(new RegExp(badChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), goodChar);
   });
   
   return result;
