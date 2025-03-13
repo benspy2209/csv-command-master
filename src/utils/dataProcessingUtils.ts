@@ -130,17 +130,29 @@ export const filterData = (
   });
 };
 
-// Calculer les statistiques
+// Calculer les statistiques avec haute précision
 export const calculateStats = (filteredData: OrderData[]) => {
-  const total = filteredData.reduce((sum, order) => sum + order.totalAmount, 0);
-  const totalVAT = filteredData.reduce((sum, order) => sum + order.totalVAT, 0);
-  const totalExcludingVAT = total - totalVAT;
-  const orderCount = filteredData.length;
+  // Utiliser des calculs avec haute précision pour éviter les erreurs d'arrondi
+  let total = 0;
+  let totalVAT = 0;
   
+  for (const order of filteredData) {
+    // S'assurer que nous travaillons avec des nombres précis
+    const orderAmount = parseFloat(order.totalAmount.toFixed(2));
+    const orderVAT = parseFloat(order.totalVAT.toFixed(2));
+    
+    total += orderAmount;
+    totalVAT += orderVAT;
+  }
+  
+  // Calculer HT avec haute précision
+  const totalExcludingVAT = parseFloat((total - totalVAT).toFixed(2));
+  
+  // Arrondir à 2 décimales pour l'affichage
   return {
     total: total.toFixed(2),
     totalVAT: totalVAT.toFixed(2),
     totalExcludingVAT: totalExcludingVAT.toFixed(2),
-    orderCount
+    orderCount: filteredData.length
   };
 };

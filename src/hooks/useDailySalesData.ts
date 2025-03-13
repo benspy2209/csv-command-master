@@ -31,8 +31,11 @@ export function useDailySalesData(data: OrderData[]): DailySalesData[] {
       const day = format(date, "dd/MM", { locale: fr });
       const currentData = dailyMap.get(day) || { amount: 0, count: 0 };
       
+      // S'assurer d'utiliser des valeurs numériques précises
+      const orderAmount = parseFloat(order.totalAmount.toFixed(2));
+      
       dailyMap.set(day, { 
-        amount: currentData.amount + order.totalAmount,
+        amount: parseFloat((currentData.amount + orderAmount).toFixed(2)),
         count: currentData.count + 1
       });
     });

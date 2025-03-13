@@ -7,6 +7,11 @@ interface OrdersTableProps {
 }
 
 export function OrdersTable({ filteredData }: OrdersTableProps) {
+  // Fonction pour formater les montants avec toujours 2 décimales
+  const formatCurrency = (amount: number) => {
+    return amount.toFixed(2).replace('.', ',') + ' €';
+  };
+
   if (filteredData.length === 0) {
     return (
       <div className="text-center p-8 border rounded-md">
@@ -35,10 +40,10 @@ export function OrdersTable({ filteredData }: OrdersTableProps) {
               <TableCell>{order.company}</TableCell>
               <TableCell>{order.vatNumber || "-"}</TableCell>
               <TableCell className="text-right">
-                {(order.totalAmount - order.totalVAT).toFixed(2)} €
+                {formatCurrency(parseFloat((order.totalAmount - order.totalVAT).toFixed(2)))}
               </TableCell>
-              <TableCell className="text-right">{order.totalVAT.toFixed(2)} €</TableCell>
-              <TableCell className="text-right">{order.totalAmount.toFixed(2)} €</TableCell>
+              <TableCell className="text-right">{formatCurrency(order.totalVAT)}</TableCell>
+              <TableCell className="text-right">{formatCurrency(order.totalAmount)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
