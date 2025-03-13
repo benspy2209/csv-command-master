@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { OrderData } from "@/pages/Index";
+import { cleanVATNumber } from "@/utils/dataProcessingUtils";
 
 interface ConsolidatedData {
   company: string;

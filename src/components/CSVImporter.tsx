@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OrderData } from "@/pages/Index";
 import Papa from "papaparse";
 import { AlertCircle, FileWarning } from "lucide-react";
+import { cleanVATNumber } from "@/utils/dataProcessingUtils";
 
 interface CSVImporterProps {
   onCancel: () => void;
@@ -89,6 +90,9 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             const totalAmount = parseCommaNumber(row["Commande.MontantTotal"] || "0");
             const totalVAT = totalTaxes + shippingVAT;
             
+            // Clean VAT number - remove spaces and dots
+            const cleanedVatNumber = cleanVATNumber(row["Société.NII"] || "");
+            
             return {
               id: `order-${index}`,
               date: row["Facture.Date"],
@@ -96,7 +100,7 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
               shippingVAT: shippingVAT,
               totalAmount: totalAmount,
               company: row["Facturation.Société"] || "",
-              vatNumber: row["Société.NII"] || "",
+              vatNumber: cleanedVatNumber,
               totalVAT: totalVAT
             };
           });

@@ -2,6 +2,13 @@ import { OrderData } from "@/pages/Index";
 import { format, parse, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 
+// Clean VAT number by removing spaces and dots, keeping only letters and numbers
+export const cleanVATNumber = (vatNumber: string | null | undefined): string => {
+  if (!vatNumber) return "";
+  // Remove spaces, dots and keep only letters and numbers
+  return vatNumber.replace(/[^a-zA-Z0-9]/g, "");
+};
+
 // Fonction pour analyser différents formats de date possibles
 export const parseOrderDate = (dateString: string) => {
   if (!dateString) return null;
@@ -90,15 +97,15 @@ export const consolidateIntracomData = (filteredData: OrderData[]) => {
     order.vatNumber.trim() !== ""
   );
 
-  // Grouper par numéro de TVA
+  // Grouper par numéro de TVA (version nettoyée)
   const groupedByVAT: Record<string, OrderData[]> = {};
   
   intracomOrders.forEach(order => {
-    const vatKey = order.vatNumber;
-    if (!groupedByVAT[vatKey]) {
-      groupedByVAT[vatKey] = [];
+    const cleanedVatNumber = cleanVATNumber(order.vatNumber);
+    if (!groupedByVAT[cleanedVatNumber]) {
+      groupedByVAT[cleanedVatNumber] = [];
     }
-    groupedByVAT[vatKey].push(order);
+    groupedByVAT[cleanedVatNumber].push(order);
   });
 
   // Créer une ligne consolidée pour chaque client (numéro de TVA)
@@ -108,7 +115,7 @@ export const consolidateIntracomData = (filteredData: OrderData[]) => {
     
     consolidatedData.push({
       company: firstOrder.company,
-      vatNumber: vatNumber,
+      vatNumber: vatNumber, // Using cleaned VAT number
       totalAmount: totalAmount,
       orderCount: orders.length,
       originalOrders: orders
@@ -167,12 +174,15 @@ export const filterData = (
       keepItem = false;
     }
     
-    // Filtre par recherche textuelle (sur société, numéro de commande ou numéro de TVA)
+    // Filtre par recherche textuelle (sur société, numéro de commande ou numéro de TVA nettoyé)
     if (searchTerm && searchTerm.trim() !== "") {
       const term = searchTerm.toLowerCase();
       const matchesCompany = order.company && order.company.toLowerCase().includes(term);
       const matchesId = order.id && order.id.toLowerCase().includes(term);
-      const matchesVat = order.vatNumber && order.vatNumber.toLowerCase().includes(term);
+      
+      // Clean VAT number for comparison
+      const cleanedVat = cleanVATNumber(order.vatNumber);
+      const matchesVat = cleanedVat && cleanedVat.toLowerCase().includes(term);
       
       if (!(matchesCompany || matchesId || matchesVat)) {
         keepItem = false;
