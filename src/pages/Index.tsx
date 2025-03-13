@@ -35,11 +35,18 @@ const Index = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col gap-8">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold">Gestionnaire de Commandes E-commerce</h1>
-          <p className="text-muted-foreground">
-            Importez, analysez et exportez vos données de commandes.
-          </p>
+        <header className="flex flex-col items-center gap-4">
+          <img 
+            src="/lovable-uploads/34efeec5-1973-4033-a624-e7cd9d290f53.png" 
+            alt="Crème de Bronzage" 
+            className="h-24 w-auto"
+          />
+          <div className="text-center">
+            <h1 className="text-3xl font-bold">Gestionnaire de Commandes E-commerce</h1>
+            <p className="text-muted-foreground">
+              Importez, analysez et exportez vos données de commandes.
+            </p>
+          </div>
         </header>
 
         {data.length === 0 ? (
