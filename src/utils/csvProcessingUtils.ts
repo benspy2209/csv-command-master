@@ -53,7 +53,7 @@ export const columnMappings: ColumnMapping = {
 // Find field mappings from headers
 export const findFieldMappings = (headers: string[]): { fieldMappings: FieldMappings, missingFields: string[] } => {
   const fieldMappings: FieldMappings = {};
-  const missingFields: string[] = [];
+  let missingFields: string[] = []; // Changed from const to let to allow modifications
   
   console.log("Searching for field mappings in headers:", headers);
   
