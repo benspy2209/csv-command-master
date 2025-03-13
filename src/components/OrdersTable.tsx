@@ -1,7 +1,7 @@
 
 import { OrderData } from "@/pages/Index";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cleanVATNumber } from "@/utils/dataProcessingUtils";
+import { cleanVATNumber, fixEncodingIssues } from "@/utils/formatUtils";
 
 interface OrdersTableProps {
   filteredData: OrderData[];

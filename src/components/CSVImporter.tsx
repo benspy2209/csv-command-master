@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { OrderData } from "@/pages/Index";
 import Papa from "papaparse";
 import { AlertCircle, FileWarning } from "lucide-react";
-import { cleanVATNumber, parseCommaNumber } from "@/utils/dataProcessingUtils";
+import { cleanVATNumber, parseCommaNumber, fixEncodingIssues } from "@/utils/formatUtils";
 
 interface CSVImporterProps {
   onCancel: () => void;
@@ -129,13 +128,16 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             // Clean VAT number - remove spaces and dots
             const cleanedVatNumber = cleanVATNumber(row[fieldMappings.vatNumber] || "");
             
+            // Fix encoding issues with company names
+            const companyName = fixEncodingIssues(row[fieldMappings.company] || "");
+            
             return {
               id: `order-${index}`,
               date: row[fieldMappings.date],
               totalTaxes: totalTaxes,
               shippingVAT: shippingVAT,
               totalAmount: totalAmount,
-              company: row[fieldMappings.company] || "",
+              company: companyName,
               vatNumber: cleanedVatNumber,
               totalVAT: totalVAT
             };
