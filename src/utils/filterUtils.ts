@@ -30,7 +30,7 @@ export const filterData = (
   return data.filter(order => {
     let keepItem = true;
     
-    // Filtre par mois
+    // Filtre par mois - ne filtrer que si selectedMonth n'est pas null
     if (selectedMonth) {
       const date = parseOrderDate(order.date);
       if (date) {

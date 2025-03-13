@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { CSVImporter } from "@/components/CSVImporter";
@@ -41,10 +41,11 @@ const Index = () => {
     });
   };
 
-  // Réinitialiser les données au chargement de la page
-  useState(() => {
-    clearAllData();
-  });
+  // Réinitialiser les données au chargement de la page à l'aide de useEffect (pas useState)
+  useEffect(() => {
+    // Décommenter la ligne suivante si vous voulez effacer les données au chargement de la page
+    // clearAllData();
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-8">

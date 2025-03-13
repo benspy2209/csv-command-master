@@ -33,11 +33,7 @@ export function DataDisplay({ data }: DataDisplayProps) {
   const months = useMemo(() => getUniqueMonths(data), [data]);
   const companies = useMemo(() => getUniqueCompanies(data), [data]);
   
-  useMemo(() => {
-    if (months.length > 0 && !selectedMonth) {
-      setSelectedMonth(months[0]);
-    }
-  }, [months, selectedMonth]);
+  // Suppression de l'initialisation automatique du premier mois pour que "Tous les mois" fonctionne correctement
 
   const handleAmountChange = (min: number | null, max: number | null) => {
     setMinAmount(min);
