@@ -14,7 +14,7 @@ export function StatisticsPanel({ stats }: StatisticsPanelProps) {
   // Fonction pour formater les montants en préservant toutes les décimales
   const formatCurrency = (amount: string) => {
     // Conserver précisément le montant à 2 décimales et utiliser la virgule
-    return amount.replace('.', ',') + ' €';
+    return parseFloat(amount).toFixed(2).replace('.', ',') + ' €';
   };
 
   return (

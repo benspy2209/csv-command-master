@@ -35,25 +35,18 @@ export function OrdersTable({ filteredData }: OrdersTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredData.map((order) => {
-            // Calculer le montant HT en soustrayant la TVA du total avec précision maximale
-            const totalVAT = Number(order.totalVAT);
-            const totalAmount = Number(order.totalAmount);
-            const totalExcludingVAT = totalAmount - totalVAT;
-            
-            return (
-              <TableRow key={order.id}>
-                <TableCell>{order.date}</TableCell>
-                <TableCell>{order.company}</TableCell>
-                <TableCell>{order.vatNumber || "-"}</TableCell>
-                <TableCell className="text-right">
-                  {formatCurrency(totalExcludingVAT)}
-                </TableCell>
-                <TableCell className="text-right">{formatCurrency(totalVAT)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(totalAmount)}</TableCell>
-              </TableRow>
-            );
-          })}
+          {filteredData.map((order) => (
+            <TableRow key={order.id}>
+              <TableCell>{order.date}</TableCell>
+              <TableCell>{order.company}</TableCell>
+              <TableCell>{order.vatNumber || "-"}</TableCell>
+              <TableCell className="text-right">
+                {formatCurrency(Number(order.totalAmount) - Number(order.totalVAT))}
+              </TableCell>
+              <TableCell className="text-right">{formatCurrency(Number(order.totalVAT))}</TableCell>
+              <TableCell className="text-right">{formatCurrency(Number(order.totalAmount))}</TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
