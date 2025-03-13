@@ -7,7 +7,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, Legend, LabelList
 } from "recharts";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 interface DataVisualizationProps {
   data: OrderData[];
@@ -21,29 +20,29 @@ export function DataVisualization({ data }: DataVisualizationProps) {
   const dailyData = useMemo(() => {
     const dailyMap = new Map<string, { amount: number, count: number }>();
     
-    // Si aucune donnée, créer au moins une entrée pour éviter l'affichage "Pas assez de données"
-    if (data.length === 0) {
-      return [{ date: "Aucune donnée", amount: 0, count: 0 }];
-    }
-    
     data.forEach(order => {
       try {
-        const date = parse(order.date, "dd/MM/yyyy", new Date());
-        if (isValid(date)) {
-          const day = format(date, "dd/MM", { locale: fr });
-          const currentData = dailyMap.get(day) || { amount: 0, count: 0 };
-          dailyMap.set(day, { 
-            amount: currentData.amount + order.totalAmount,
-            count: currentData.count + 1
-          });
+        // Vérifier si la date est au bon format
+        if (order.date && order.date.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+          const date = parse(order.date, "dd/MM/yyyy", new Date());
+          
+          if (isValid(date)) {
+            const day = format(date, "dd/MM", { locale: fr });
+            const currentData = dailyMap.get(day) || { amount: 0, count: 0 };
+            
+            dailyMap.set(day, { 
+              amount: currentData.amount + order.totalAmount,
+              count: currentData.count + 1
+            });
+          }
         }
       } catch (e) {
-        // Ignorer les dates invalides
+        console.error("Erreur lors du traitement de la date:", order.date, e);
       }
     });
     
     // Convertir en tableau et trier par date
-    return Array.from(dailyMap.entries())
+    const result = Array.from(dailyMap.entries())
       .map(([date, values]) => ({ 
         date, 
         amount: values.amount,
@@ -54,15 +53,23 @@ export function DataVisualization({ data }: DataVisualizationProps) {
           const dateA = parse(a.date, "dd/MM", new Date());
           const dateB = parse(b.date, "dd/MM", new Date());
           return dateA.getTime() - dateB.getTime();
-        } catch {
+        } catch (e) {
+          console.error("Erreur lors du tri des dates:", a.date, b.date, e);
           return 0;
         }
       });
+    
+    // Si aucune donnée, créer une entrée par défaut
+    if (result.length === 0) {
+      return [{ date: "Aucune donnée", amount: 0, count: 0 }];
+    }
+    
+    return result;
   }, [data]);
 
   // Données pour le graphique circulaire (par société)
   const companyData = useMemo(() => {
-    // Si aucune donnée, créer au moins une entrée
+    // Si aucune donnée, créer une entrée par défaut
     if (data.length === 0) {
       return [{ name: "Aucune donnée", value: 100, percentage: "100%" }];
     }
@@ -70,18 +77,21 @@ export function DataVisualization({ data }: DataVisualizationProps) {
     const companyMap = new Map<string, number>();
     
     data.forEach(order => {
-      const company = order.company || "Non spécifié";
+      const company = order.company && order.company.trim() !== "" 
+        ? order.company 
+        : "Non spécifié";
+      
       const currentTotal = companyMap.get(company) || 0;
       companyMap.set(company, currentTotal + order.totalAmount);
     });
     
-    // Limiter à 6 sociétés + "Autres" pour éviter la surcharge du graphique
+    // Limiter à 5 sociétés + "Autres" pour éviter la surcharge du graphique
     const sortedEntries = Array.from(companyMap.entries())
       .sort((a, b) => b[1] - a[1]);
       
     const totalAmount = sortedEntries.reduce((sum, [_, value]) => sum + value, 0);
     
-    if (sortedEntries.length <= 6) {
+    if (sortedEntries.length <= 5) {
       return sortedEntries.map(([name, value]) => ({ 
         name, 
         value,
@@ -89,10 +99,10 @@ export function DataVisualization({ data }: DataVisualizationProps) {
       }));
     }
     
-    // Prendre les 5 premiers et regrouper le reste
-    const topEntries = sortedEntries.slice(0, 5);
+    // Prendre les 4 premiers et regrouper le reste dans "Autres"
+    const topEntries = sortedEntries.slice(0, 4);
     const othersValue = sortedEntries
-      .slice(5)
+      .slice(4)
       .reduce((sum, [, value]) => sum + value, 0);
       
     return [
@@ -111,7 +121,7 @@ export function DataVisualization({ data }: DataVisualizationProps) {
 
   // Données pour analyser la répartition TVA / HT
   const vatData = useMemo(() => {
-    // Si aucune donnée, créer au moins une entrée
+    // Si aucune donnée, créer une entrée par défaut
     if (data.length === 0) {
       return [
         { name: "Montant HT", value: 100, percentage: "100%" },
@@ -137,133 +147,153 @@ export function DataVisualization({ data }: DataVisualizationProps) {
     ];
   }, [data]);
 
-  // Formateur personnalisé pour les montants
+  // Formater les montants en euros
   const formatCurrency = (value: number) => `${value.toFixed(2)} €`;
 
-  // Configuration personnalisée pour les tooltips
-  const customTooltipFormatter = (value: number) => {
-    return [`${formatCurrency(value)}`, "Montant"];
-  };
+  // Vérifier si des données sont disponibles pour afficher les graphiques
+  const hasData = data.length > 0;
 
   return (
     <div className="space-y-8">
       <div className="bg-background border rounded-lg p-4 shadow-sm">
         <h3 className="text-lg font-medium mb-4">Ventes par jour</h3>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dailyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fill: '#666', fontSize: 12 }}
-                tickFormatter={(value) => value}
-              />
-              <YAxis 
-                tickFormatter={formatCurrency} 
-                tick={{ fill: '#666', fontSize: 12 }}
-              />
-              <Tooltip 
-                formatter={(value) => formatCurrency(value as number)}
-                labelFormatter={(label) => `Date: ${label}`}
-                contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: '4px',
-                  padding: '10px'
-                }}
-              />
-              <Bar 
-                dataKey="amount" 
-                fill="#0088FE" 
-                name="Montant" 
-                radius={[4, 4, 0, 0]}
-                barSize={30}
-              >
-                <LabelList dataKey="count" position="top" formatter={(value: number) => value > 0 ? `${value} cmd` : ""} fill="#666" />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {hasData ? (
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fill: '#666', fontSize: 12 }}
+                />
+                <YAxis 
+                  tickFormatter={formatCurrency} 
+                  tick={{ fill: '#666', fontSize: 12 }}
+                />
+                <Tooltip 
+                  formatter={(value) => formatCurrency(value as number)}
+                  labelFormatter={(label) => `Date: ${label}`}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid #f0f0f0',
+                    borderRadius: '4px',
+                    padding: '10px'
+                  }}
+                />
+                <Bar 
+                  dataKey="amount" 
+                  fill="#0088FE" 
+                  name="Montant" 
+                  radius={[4, 4, 0, 0]}
+                  barSize={30}
+                >
+                  <LabelList 
+                    dataKey="count" 
+                    position="top" 
+                    formatter={(value: number) => value > 0 ? `${value} cmd` : ""} 
+                    fill="#666" 
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="h-72 flex items-center justify-center text-muted-foreground">
+            Aucune donnée disponible pour la période sélectionnée
+          </div>
+        )}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-background border rounded-lg p-4 shadow-sm">
           <h3 className="text-lg font-medium mb-4">Répartition par société</h3>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={companyData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine
-                  outerRadius={90}
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  label={({ name, percentage }) => `${name}: ${percentage}`}
-                >
-                  {companyData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value) => formatCurrency(value as number)}
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #f0f0f0',
-                    borderRadius: '4px',
-                    padding: '10px'
-                  }}
-                />
-                <Legend 
-                  layout="horizontal" 
-                  verticalAlign="bottom" 
-                  align="center"
-                  formatter={(value) => <span style={{ fontSize: '12px' }}>{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {hasData ? (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={companyData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    outerRadius={90}
+                    fill="#8884d8"
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, percentage }) => `${name}: ${percentage}`}
+                  >
+                    {companyData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(value as number)}
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #f0f0f0',
+                      borderRadius: '4px',
+                      padding: '10px'
+                    }}
+                  />
+                  <Legend 
+                    layout="horizontal" 
+                    verticalAlign="bottom" 
+                    align="center"
+                    formatter={(value) => <span style={{ fontSize: '12px' }}>{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-72 flex items-center justify-center text-muted-foreground">
+              Aucune donnée disponible pour la période sélectionnée
+            </div>
+          )}
         </div>
         
         <div className="bg-background border rounded-lg p-4 shadow-sm">
           <h3 className="text-lg font-medium mb-4">Répartition HT / TVA</h3>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={vatData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine
-                  outerRadius={90}
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  label={({ name, percentage }) => `${name}: ${percentage}`}
-                >
-                  <Cell fill="#00C49F" />
-                  <Cell fill="#FF8042" />
-                </Pie>
-                <Tooltip 
-                  formatter={(value) => formatCurrency(value as number)}
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    border: '1px solid #f0f0f0',
-                    borderRadius: '4px',
-                    padding: '10px'
-                  }}
-                />
-                <Legend 
-                  layout="horizontal" 
-                  verticalAlign="bottom" 
-                  align="center" 
-                  formatter={(value) => <span style={{ fontSize: '12px' }}>{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {hasData ? (
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={vatData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={true}
+                    outerRadius={90}
+                    fill="#8884d8"
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, percentage }) => `${name}: ${percentage}`}
+                  >
+                    <Cell fill="#00C49F" />
+                    <Cell fill="#FF8042" />
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => formatCurrency(value as number)}
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #f0f0f0',
+                      borderRadius: '4px',
+                      padding: '10px'
+                    }}
+                  />
+                  <Legend 
+                    layout="horizontal" 
+                    verticalAlign="bottom" 
+                    align="center" 
+                    formatter={(value) => <span style={{ fontSize: '12px' }}>{value}</span>}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-72 flex items-center justify-center text-muted-foreground">
+              Aucune donnée disponible pour la période sélectionnée
+            </div>
+          )}
         </div>
       </div>
     </div>
