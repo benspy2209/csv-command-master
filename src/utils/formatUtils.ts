@@ -47,32 +47,59 @@ export const normalizeText = (text: string): string => {
   };
 
   // Also handle specific character encoding issues seen in real data
+  // Use numbered keys to avoid duplicate keys when rendered as � in editor
   const encodingIssueReplacements: Record<string, string> = {
-    // Common ISO-8859-1 or Windows-1252 mis-encoded characters
-    '�': 'é',
-    '�': 'è',
-    '�': 'à',
-    '�': 'ç',
-    '�': 'ê',
-    '�': 'ë',
-    '�': 'î',
-    '�': 'ï',
-    '�': 'ô',
-    '�': 'ù',
-    '�': 'û',
-    '�': 'ü'
+    // Each key is a unique placeholder for different mis-encoded characters
+    'char1': 'é',
+    'char2': 'è',
+    'char3': 'à',
+    'char4': 'ç',
+    'char5': 'ê',
+    'char6': 'ë',
+    'char7': 'î',
+    'char8': 'ï',
+    'char9': 'ô',
+    'char10': 'ù',
+    'char11': 'û',
+    'char12': 'ü'
   };
+
+  // Actual problematic characters to replace (in the correct order)
+  const problematicChars = [
+    '\uFFFD', // Replacement character (often shown as �)
+    '\u00C3\u00A9', // é in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00A8', // è in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00A0', // à in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00A7', // ç in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00AA', // ê in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00AB', // ë in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00AE', // î in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00AF', // ï in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00B4', // ô in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00B9', // ù in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00BB', // û in UTF-8 interpreted as ISO-8859-1
+    '\u00C3\u00BC'  // ü in UTF-8 interpreted as ISO-8859-1
+  ];
 
   let result = text;
   
   // Replace encoding issues first
-  Object.entries(encodingIssueReplacements).forEach(([badChar, goodChar]) => {
-    result = result.replace(new RegExp(badChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), goodChar);
+  problematicChars.forEach((badChar, index) => {
+    const replacementKey = `char${index + 1}`;
+    if (encodingIssueReplacements[replacementKey]) {
+      result = result.replace(
+        new RegExp(badChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
+        encodingIssueReplacements[replacementKey]
+      );
+    }
   });
   
   // Then normalize Unicode characters
   Object.entries(replacements).forEach(([badChar, goodChar]) => {
-    result = result.replace(new RegExp(badChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), goodChar);
+    result = result.replace(
+      new RegExp(badChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
+      goodChar
+    );
   });
   
   return result;
