@@ -18,7 +18,7 @@ export const parseCommaNumber = (value: string): number => {
   return isNaN(parsedValue) ? 0 : parsedValue;
 };
 
-// Fonction pour vérifier si un numéro de TVA semble valide
+// Fonction pour vérifier si un numéro de TVA semble valide (format basique)
 export const isVATNumberValid = (vatNumber: string): boolean => {
   if (!vatNumber) return false;
   
@@ -27,6 +27,18 @@ export const isVATNumberValid = (vatNumber: string): boolean => {
   // - Commencer par 2 lettres de code pays suivies de chiffres/lettres
   const vatRegex = /^[A-Z]{2}[A-Z0-9]{6,}$/;
   return vatRegex.test(vatNumber);
+};
+
+// Fonction pour extraire le code pays d'un numéro de TVA
+export const getCountryCodeFromVAT = (vatNumber: string): string => {
+  if (!vatNumber || vatNumber.length < 2) return "";
+  return vatNumber.substring(0, 2);
+};
+
+// Fonction pour extraire le numéro sans le code pays
+export const getNumberWithoutCountryCode = (vatNumber: string): string => {
+  if (!vatNumber || vatNumber.length < 3) return "";
+  return vatNumber.substring(2);
 };
 
 // Fonction pour corriger les problèmes d'encodage des caractères spéciaux

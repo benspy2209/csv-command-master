@@ -20,7 +20,10 @@ export function OrderTableRow({ order, formatCurrency }: OrderTableRowProps) {
       <TableCell className="flex items-center gap-2">
         {order.vatNumber || "-"}
         {order.vatNumber && (
-          <Badge variant={vatIsValid ? "default" : "destructive"} className="flex items-center gap-1 ml-2">
+          <Badge 
+            variant={vatIsValid ? "default" : "destructive"} 
+            className={`flex items-center gap-1 ml-2 ${vatIsValid ? "bg-green-500" : "bg-red-500"}`}
+          >
             {vatIsValid ? 
               <Check className="h-3 w-3" /> : 
               <X className="h-3 w-3" />
