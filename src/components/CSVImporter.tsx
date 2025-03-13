@@ -75,18 +75,19 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
             return;
           }
 
-          // Traiter les données
+          // Traiter les données avec précision maximale
           const processedData = (results.data as any[]).map((row, index) => {
-            const totalVAT = 
-              (parseFloat(row["Commande.TotalTaxes"] || 0) + 
-              parseFloat(row["Livraison.MontantTVA"] || 0));
+            // Utiliser Number pour garantir la précision maximale
+            const totalTaxes = Number(row["Commande.TotalTaxes"] || 0);
+            const shippingVAT = Number(row["Livraison.MontantTVA"] || 0);
+            const totalVAT = totalTaxes + shippingVAT;
             
             return {
               id: `order-${index}`,
               date: row["Facture.Date"],
-              totalTaxes: parseFloat(row["Commande.TotalTaxes"] || 0),
-              shippingVAT: parseFloat(row["Livraison.MontantTVA"] || 0),
-              totalAmount: parseFloat(row["Commande.MontantTotal"] || 0),
+              totalTaxes: totalTaxes,
+              shippingVAT: shippingVAT,
+              totalAmount: Number(row["Commande.MontantTotal"] || 0),
               company: row["Facturation.Société"] || "",
               vatNumber: row["Société.NII"] || "",
               totalVAT: totalVAT

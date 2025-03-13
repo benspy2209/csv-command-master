@@ -95,7 +95,7 @@ export const filterData = (
     // Filtre intracom - une commande intracom a une TVA à 0€ ET un numéro de TVA valide
     if (showIntracomOnly) {
       // Vérifier que la TVA est à 0 et qu'un numéro de TVA est présent et non vide
-      if (!(parseFloat(String(order.totalVAT)) === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
+      if (!(Number(order.totalVAT) === 0 && order.vatNumber && order.vatNumber.trim() !== "")) {
         keepItem = false;
       }
     }
@@ -106,11 +106,11 @@ export const filterData = (
     }
     
     // Filtre par montant
-    if (minAmount !== null && parseFloat(String(order.totalAmount)) < minAmount) {
+    if (minAmount !== null && Number(order.totalAmount) < minAmount) {
       keepItem = false;
     }
     
-    if (maxAmount !== null && parseFloat(String(order.totalAmount)) > maxAmount) {
+    if (maxAmount !== null && Number(order.totalAmount) > maxAmount) {
       keepItem = false;
     }
     
@@ -137,15 +137,15 @@ export const calculateStats = (filteredData: OrderData[]) => {
   let totalVAT = 0;
   
   for (const order of filteredData) {
-    // Convertir en nombre et conserver toutes les décimales
-    total += parseFloat(String(order.totalAmount));
-    totalVAT += parseFloat(String(order.totalVAT));
+    // Utiliser Number pour garantir une conversion précise
+    total += Number(order.totalAmount);
+    totalVAT += Number(order.totalVAT);
   }
   
   // Calculer HT en soustrayant la TVA du total (sans arrondi intermédiaire)
   const totalExcludingVAT = total - totalVAT;
   
-  // Retourner les valeurs avec 2 décimales uniquement pour l'affichage
+  // Convertir en chaînes avec 2 décimales pour l'affichage
   return {
     total: total.toFixed(2),
     totalVAT: totalVAT.toFixed(2),

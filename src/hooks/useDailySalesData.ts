@@ -31,9 +31,9 @@ export function useDailySalesData(data: OrderData[]): DailySalesData[] {
       const day = format(date, "dd/MM", { locale: fr });
       const currentData = dailyMap.get(day) || { amount: 0, count: 0 };
       
-      // Utiliser le montant exact avec toutes les décimales
+      // Utiliser Number au lieu de parseFloat pour une conversion plus précise
       dailyMap.set(day, { 
-        amount: currentData.amount + parseFloat(String(order.totalAmount)), 
+        amount: currentData.amount + Number(order.totalAmount), 
         count: currentData.count + 1
       });
     });
