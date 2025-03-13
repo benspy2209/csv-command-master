@@ -1,3 +1,4 @@
+
 import { OrderData } from "@/pages/Index";
 import { format, parse, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -122,8 +123,8 @@ export const consolidateIntracomData = (filteredData: OrderData[]) => {
     });
   });
 
-  // Trier par montant total décroissant
-  return consolidatedData.sort((a, b) => b.totalAmount - a.totalAmount);
+  // Trier par numéro de TVA par ordre alphabétique (A-Z)
+  return consolidatedData.sort((a, b) => a.vatNumber.localeCompare(b.vatNumber));
 };
 
 // Filtrer les données selon les critères
