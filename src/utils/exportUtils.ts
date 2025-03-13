@@ -1,9 +1,8 @@
-
 import { OrderData } from "@/pages/Index";
 import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 // Export en CSV
 export const exportToCSV = (filteredData: OrderData[], selectedMonth: string | null, showIntracomOnly: boolean) => {
@@ -68,8 +67,7 @@ export const exportToPDF = (
   doc.text(`Montant total TTC: ${stats.total.replace('.', ',')} €`, 14, 54);
   
   // Tableau
-  // @ts-ignore
-  doc.autoTable({
+  autoTable(doc, {
     startY: 65,
     head: [['Date', 'Société', 'N° TVA', 'Montant HT', 'TVA', 'Total']],
     body: filteredData.map(order => [

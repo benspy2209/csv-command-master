@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { OrderData } from "@/pages/Index";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,20 +29,17 @@ export function DataDisplay({ data }: DataDisplayProps) {
   const months = useMemo(() => getUniqueMonths(data), [data]);
   const companies = useMemo(() => getUniqueCompanies(data), [data]);
   
-  // Sélectionner le mois le plus récent par défaut
   useMemo(() => {
     if (months.length > 0 && !selectedMonth) {
       setSelectedMonth(months[0]);
     }
   }, [months, selectedMonth]);
 
-  // Gérer les changements de montant
   const handleAmountChange = (min: number | null, max: number | null) => {
     setMinAmount(min);
     setMaxAmount(max);
   };
 
-  // Filtrer les données selon les critères
   const filteredData = useMemo(() => 
     filterData(
       data, 
@@ -57,7 +53,6 @@ export function DataDisplay({ data }: DataDisplayProps) {
     [data, selectedMonth, showIntracomOnly, selectedCompany, minAmount, maxAmount, searchTerm]
   );
 
-  // Calculer les statistiques
   const stats = useMemo(() => 
     calculateStats(filteredData), 
     [filteredData]
@@ -81,24 +76,8 @@ export function DataDisplay({ data }: DataDisplayProps) {
         onSearchChange={setSearchTerm}
       />
       
-      <StatisticsPanel stats={stats} />
-
       <div className="flex justify-between items-center">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList>
-            <TabsTrigger value="table">Tableau</TabsTrigger>
-            <TabsTrigger value="charts">Graphiques</TabsTrigger>
-          </TabsList>
-        
-          <TabsContent value="table" className="mt-4">
-            <OrdersTable filteredData={filteredData} />
-          </TabsContent>
-          
-          <TabsContent value="charts" className="mt-4">
-            <DataVisualization data={filteredData} />
-          </TabsContent>
-        </Tabs>
-        
+        <StatisticsPanel stats={stats} />
         <ExportButtons 
           filteredData={filteredData}
           selectedMonth={selectedMonth}
@@ -106,6 +85,21 @@ export function DataDisplay({ data }: DataDisplayProps) {
           stats={stats}
         />
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="table">Tableau</TabsTrigger>
+          <TabsTrigger value="charts">Graphiques</TabsTrigger>
+        </TabsList>
+      
+        <TabsContent value="table" className="mt-4">
+          <OrdersTable filteredData={filteredData} />
+        </TabsContent>
+        
+        <TabsContent value="charts" className="mt-4">
+          <DataVisualization data={filteredData} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

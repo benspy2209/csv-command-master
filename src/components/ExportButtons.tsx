@@ -30,7 +30,7 @@ export function ExportButtons({
         onClick={() => exportToCSV(filteredData, selectedMonth, showIntracomOnly)}
       >
         <Download className="h-4 w-4 mr-2" />
-        CSV
+        Exporter en CSV
       </Button>
       <Button 
         variant="outline" 
@@ -38,7 +38,7 @@ export function ExportButtons({
         onClick={() => exportToPDF(filteredData, selectedMonth, showIntracomOnly, stats)}
       >
         <Printer className="h-4 w-4 mr-2" />
-        PDF
+        Exporter en PDF
       </Button>
     </div>
   );
