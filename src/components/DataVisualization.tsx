@@ -3,27 +3,39 @@ import { useMemo } from "react";
 import { OrderData } from "@/pages/Index";
 import { format, parse, isValid } from "date-fns";
 import { fr } from "date-fns/locale";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, Legend, LabelList
+} from "recharts";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 interface DataVisualizationProps {
   data: OrderData[];
 }
 
-// Couleurs pour les graphiques
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+// Couleurs pour les graphiques (palette améliorée)
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#d0ed57'];
 
 export function DataVisualization({ data }: DataVisualizationProps) {
   // Regrouper les données par jour pour le graphique à barres
   const dailyData = useMemo(() => {
-    const dailyMap = new Map<string, number>();
+    const dailyMap = new Map<string, { amount: number, count: number }>();
+    
+    // Si aucune donnée, créer au moins une entrée pour éviter l'affichage "Pas assez de données"
+    if (data.length === 0) {
+      return [{ date: "Aucune donnée", amount: 0, count: 0 }];
+    }
     
     data.forEach(order => {
       try {
         const date = parse(order.date, "dd/MM/yyyy", new Date());
         if (isValid(date)) {
-          const day = format(date, "dd/MM");
-          const currentTotal = dailyMap.get(day) || 0;
-          dailyMap.set(day, currentTotal + order.totalAmount);
+          const day = format(date, "dd/MM", { locale: fr });
+          const currentData = dailyMap.get(day) || { amount: 0, count: 0 };
+          dailyMap.set(day, { 
+            amount: currentData.amount + order.totalAmount,
+            count: currentData.count + 1
+          });
         }
       } catch (e) {
         // Ignorer les dates invalides
@@ -32,7 +44,11 @@ export function DataVisualization({ data }: DataVisualizationProps) {
     
     // Convertir en tableau et trier par date
     return Array.from(dailyMap.entries())
-      .map(([date, amount]) => ({ date, amount }))
+      .map(([date, values]) => ({ 
+        date, 
+        amount: values.amount,
+        count: values.count 
+      }))
       .sort((a, b) => {
         try {
           const dateA = parse(a.date, "dd/MM", new Date());
@@ -46,6 +62,11 @@ export function DataVisualization({ data }: DataVisualizationProps) {
 
   // Données pour le graphique circulaire (par société)
   const companyData = useMemo(() => {
+    // Si aucune donnée, créer au moins une entrée
+    if (data.length === 0) {
+      return [{ name: "Aucune donnée", value: 100, percentage: "100%" }];
+    }
+    
     const companyMap = new Map<string, number>();
     
     data.forEach(order => {
@@ -58,8 +79,14 @@ export function DataVisualization({ data }: DataVisualizationProps) {
     const sortedEntries = Array.from(companyMap.entries())
       .sort((a, b) => b[1] - a[1]);
       
+    const totalAmount = sortedEntries.reduce((sum, [_, value]) => sum + value, 0);
+    
     if (sortedEntries.length <= 6) {
-      return sortedEntries.map(([name, value]) => ({ name, value }));
+      return sortedEntries.map(([name, value]) => ({ 
+        name, 
+        value,
+        percentage: `${Math.round((value / totalAmount) * 100)}%`
+      }));
     }
     
     // Prendre les 5 premiers et regrouper le reste
@@ -69,115 +96,173 @@ export function DataVisualization({ data }: DataVisualizationProps) {
       .reduce((sum, [, value]) => sum + value, 0);
       
     return [
-      ...topEntries.map(([name, value]) => ({ name, value })),
-      { name: "Autres", value: othersValue }
+      ...topEntries.map(([name, value]) => ({ 
+        name, 
+        value,
+        percentage: `${Math.round((value / totalAmount) * 100)}%`
+      })),
+      { 
+        name: "Autres", 
+        value: othersValue,
+        percentage: `${Math.round((othersValue / totalAmount) * 100)}%`
+      }
     ];
   }, [data]);
 
   // Données pour analyser la répartition TVA / HT
   const vatData = useMemo(() => {
+    // Si aucune donnée, créer au moins une entrée
+    if (data.length === 0) {
+      return [
+        { name: "Montant HT", value: 100, percentage: "100%" },
+        { name: "TVA", value: 0, percentage: "0%" }
+      ];
+    }
+    
     const totalAmount = data.reduce((sum, order) => sum + order.totalAmount, 0);
     const totalVAT = data.reduce((sum, order) => sum + order.totalVAT, 0);
     const totalExcludingVAT = totalAmount - totalVAT;
     
     return [
-      { name: "Montant HT", value: totalExcludingVAT },
-      { name: "TVA", value: totalVAT }
+      { 
+        name: "Montant HT", 
+        value: totalExcludingVAT,
+        percentage: `${Math.round((totalExcludingVAT / totalAmount) * 100)}%`
+      },
+      { 
+        name: "TVA", 
+        value: totalVAT,
+        percentage: `${Math.round((totalVAT / totalAmount) * 100)}%`
+      }
     ];
   }, [data]);
 
   // Formateur personnalisé pour les montants
   const formatCurrency = (value: number) => `${value.toFixed(2)} €`;
 
+  // Configuration personnalisée pour les tooltips
+  const customTooltipFormatter = (value: number) => {
+    return [`${formatCurrency(value)}`, "Montant"];
+  };
+
   return (
     <div className="space-y-8">
-      <div className="bg-background border rounded-lg p-4">
+      <div className="bg-background border rounded-lg p-4 shadow-sm">
         <h3 className="text-lg font-medium mb-4">Ventes par jour</h3>
         <div className="h-72">
-          {dailyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis tickFormatter={formatCurrency} />
-                <Tooltip 
-                  formatter={(value) => formatCurrency(value as number)}
-                  labelFormatter={(label) => `Date: ${label}`}
-                />
-                <Bar dataKey="amount" fill="#8884d8" name="Montant" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-muted-foreground">Pas assez de données pour afficher ce graphique</p>
-            </div>
-          )}
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={dailyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fill: '#666', fontSize: 12 }}
+                tickFormatter={(value) => value}
+              />
+              <YAxis 
+                tickFormatter={formatCurrency} 
+                tick={{ fill: '#666', fontSize: 12 }}
+              />
+              <Tooltip 
+                formatter={(value) => formatCurrency(value as number)}
+                labelFormatter={(label) => `Date: ${label}`}
+                contentStyle={{ 
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  border: '1px solid #f0f0f0',
+                  borderRadius: '4px',
+                  padding: '10px'
+                }}
+              />
+              <Bar 
+                dataKey="amount" 
+                fill="#0088FE" 
+                name="Montant" 
+                radius={[4, 4, 0, 0]}
+                barSize={30}
+              >
+                <LabelList dataKey="count" position="top" formatter={(value: number) => value > 0 ? `${value} cmd` : ""} fill="#666" />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-background border rounded-lg p-4">
+        <div className="bg-background border rounded-lg p-4 shadow-sm">
           <h3 className="text-lg font-medium mb-4">Répartition par société</h3>
           <div className="h-72">
-            {companyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={companyData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    nameKey="name"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {companyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-muted-foreground">Pas assez de données pour afficher ce graphique</p>
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={companyData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine
+                  outerRadius={90}
+                  fill="#8884d8"
+                  dataKey="value"
+                  nameKey="name"
+                  label={({ name, percentage }) => `${name}: ${percentage}`}
+                >
+                  {companyData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value) => formatCurrency(value as number)}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid #f0f0f0',
+                    borderRadius: '4px',
+                    padding: '10px'
+                  }}
+                />
+                <Legend 
+                  layout="horizontal" 
+                  verticalAlign="bottom" 
+                  align="center"
+                  formatter={(value) => <span style={{ fontSize: '12px' }}>{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
         
-        <div className="bg-background border rounded-lg p-4">
+        <div className="bg-background border rounded-lg p-4 shadow-sm">
           <h3 className="text-lg font-medium mb-4">Répartition HT / TVA</h3>
           <div className="h-72">
-            {vatData.length > 0 && vatData[0].value + vatData[1].value > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={vatData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    nameKey="name"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    <Cell fill="#00C49F" />
-                    <Cell fill="#FF8042" />
-                  </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-muted-foreground">Pas assez de données pour afficher ce graphique</p>
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={vatData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine
+                  outerRadius={90}
+                  fill="#8884d8"
+                  dataKey="value"
+                  nameKey="name"
+                  label={({ name, percentage }) => `${name}: ${percentage}`}
+                >
+                  <Cell fill="#00C49F" />
+                  <Cell fill="#FF8042" />
+                </Pie>
+                <Tooltip 
+                  formatter={(value) => formatCurrency(value as number)}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: '1px solid #f0f0f0',
+                    borderRadius: '4px',
+                    padding: '10px'
+                  }}
+                />
+                <Legend 
+                  layout="horizontal" 
+                  verticalAlign="bottom" 
+                  align="center" 
+                  formatter={(value) => <span style={{ fontSize: '12px' }}>{value}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
