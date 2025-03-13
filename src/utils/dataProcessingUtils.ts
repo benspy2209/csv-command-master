@@ -40,9 +40,12 @@ export const getUniqueMonths = (data: OrderData[]) => {
   const months = new Set<string>();
   
   data.forEach(order => {
+    if (!order.date) return;
+    
     const date = parseOrderDate(order.date);
     if (date) {
       const monthKey = format(date, "yyyy-MM");
+      const monthName = format(date, "MMMM yyyy", { locale: fr });
       months.add(monthKey);
     }
   });

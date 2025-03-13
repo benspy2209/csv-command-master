@@ -61,7 +61,6 @@ export function useDailySalesData(data: OrderData[]): DailySalesData[] {
       return [{ date: "Aucune donnée", amount: 0, count: 0 }];
     }
     
-    console.log("Données journalières:", result);
     return result;
   }, [data]);
 }
