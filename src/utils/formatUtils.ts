@@ -13,12 +13,45 @@ export const parseCommaNumber = (value: string | number): number => {
   return parseFloat(value.replace(",", "."));
 };
 
-// Fonction pour normaliser les caractères accentués et spéciaux
+// Fonction pour corriger les problèmes d'encodage avec les caractères accentués
 export const normalizeText = (text: string): string => {
   if (!text) return "";
-  // Normalise la chaîne en décomposant les caractères accentués
-  // puis en les recomposant avec la forme normalisée
-  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, '').normalize("NFC");
+  
+  // Remplacer les caractères mal encodés les plus courants
+  const replacements: Record<string, string> = {
+    '�': 'é',
+    '�': 'è',
+    '�': 'ê',
+    '�': 'ë',
+    '�': 'à',
+    '�': 'â',
+    '�': 'ô',
+    '�': 'î',
+    '�': 'ï',
+    '�': 'ü',
+    '�': 'ù',
+    '�': 'ç',
+    '�': 'É',
+    '�': 'È',
+    '�': 'Ê',
+    '�': 'Ë',
+    '�': 'À',
+    '�': 'Â',
+    '�': 'Ô',
+    '�': 'Î',
+    '�': 'Ï',
+    '�': 'Ü',
+    '�': 'Ù',
+    '�': 'Ç'
+  };
+
+  let result = text;
+  // Remplacer les caractères problématiques
+  Object.entries(replacements).forEach(([badChar, goodChar]) => {
+    result = result.replace(new RegExp(badChar, 'g'), goodChar);
+  });
+  
+  return result;
 };
 
 // Fonction pour détecter les colonnes liées aux entreprises

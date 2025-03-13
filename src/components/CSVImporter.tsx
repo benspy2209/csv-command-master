@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,286 +43,285 @@ export function CSVImporter({ onCancel, onImportSuccess }: CSVImporterProps) {
     setError(null);
     console.log("Début du traitement du fichier:", file.name);
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      encoding: "UTF-8", // Force UTF-8 encoding
-      complete: (results) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (!event.target || !event.target.result) {
         setIsProcessing(false);
-        try {
-          console.log("Résultats du parsing:", results);
-          
-          if (results.errors && results.errors.length > 0) {
-            console.error("Erreurs de parsing:", results.errors);
-            setError(`Erreur lors de l'analyse du CSV: ${results.errors[0].message}`);
-            return;
-          }
+        setError("Erreur lors de la lecture du fichier");
+        return;
+      }
 
-          if (!results.data || results.data.length === 0) {
-            setError("Le fichier CSV ne contient pas de données valides");
-            return;
-          }
+      let csvContent = event.target.result as string;
+      
+      Papa.parse(csvContent, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          setIsProcessing(false);
+          try {
+            console.log("Résultats du parsing:", results);
+            
+            if (results.errors && results.errors.length > 0) {
+              console.error("Erreurs de parsing:", results.errors);
+              setError(`Erreur lors de l'analyse du CSV: ${results.errors[0].message}`);
+              return;
+            }
 
-          // Get all headers from the file and normalize them to fix encoding issues
-          const rawHeaders = Object.keys(results.data[0] || {});
-          const headers = rawHeaders.map(header => normalizeText(header));
-          console.log("En-têtes détectés:", headers);
-          
-          // Define possible column mappings (multiple possible names for each required field)
-          const columnMappings = {
-            date: [
-              "Facture.Date", "Date", "OrderDate", "InvoiceDate", "Date.Facture",
-              "Commande.Date", "DateFacture", "Invoice.Date", "Order.Date",
-              "Date.Commande", "Date.Order", "Date.Invoice", "DateFacturation"
-            ],
-            totalTaxes: [
-              "Commande.TotalTaxes", "TotalTaxes", "OrderTaxes", "Taxes", 
-              "MontantTaxes", "Commande.MontantTaxes", "Taxes.Total", "Montant.Taxes",
-              "Total.Taxes", "Taxes.Montant", "Montant.TVA", "TVA.Total"
-            ],
-            shippingVAT: [
-              "Livraison.MontantTVA", "ShippingVAT", "LivraisonTVA", "TVA.Livraison",
-              "Livraison.TVA", "TVALivraison", "Shipping.VAT", "DeliveryVAT",
-              "Frais.Livraison.TVA", "Shipping.Tax", "Tax.Shipping"
-            ],
-            totalAmount: [
-              "Commande.MontantTotal", "MontantTotal", "TotalAmount", "OrderTotal",
-              "Total", "Montant", "Commande.Total", "Order.Amount", "Total.Order",
-              "Montant.Commande", "Commande.Montant", "Total.Montant", "Amount.Total"
-            ],
-            company: [
-              "Facturation.Société", "Société", "Company", "CompanyName", "Entreprise",
-              "Facturation.Entreprise", "Facturation.Company", "Client.Société",
-              "Société", "Facturation.Société", "Client.Société", "Client.Company",
-              // Inclure des variantes pour tenir compte des problèmes d'encodage
-              "Societe", "Facturation.Societe", "Client.Societe", "NomEntreprise",
-              "Nom.Entreprise", "RaisonSociale", "Raison.Sociale", "Nom.Societe",
-              "BusinessName", "Client.Name", "Customer.Company", "Client.BusinessName",
-              "Nom.Commercial", "Etablissement", "Nom.Etablissement"
-            ],
-            firstName: [
-              "Facturation.Prénom", "Facturation.Prenom", "Prénom", "Prenom", 
-              "FirstName", "Client.Prénom", "Client.Prenom"
-            ],
-            lastName: [
-              "Facturation.Nom", "Nom", "LastName", "Client.Nom", "Surname"
-            ],
-            vatNumber: [
-              "Société.NII", "NII", "VATNumber", "NumeroTVA", "TVA", "VAT",
-              "NumTVA", "Société.NII", "Société.TVA", "Company.VAT", "Company.VATNumber",
-              "NoTVA", "Numero.TVA", "Société.TVA", "Société.NumTVA", "TVA.Numero",
-              // Inclure des variantes pour tenir compte des problèmes d'encodage
-              "Societe.NII", "Societe.TVA", "Societe.NumTVA", "NumeroTVA",
-              "NumeroFiscal", "IdentifiantTVA", "Identifiant.TVA", "Identifiant.Fiscal",
-              "SIRET", "SIREN", "Societe.SIRET", "Societe.SIREN", "Société.SIRET",
-              "Company.TaxID", "TaxID", "Tax.Number", "Numero.Fiscal", "ID.Fiscal",
-              "Client.TVA", "Client.NumTVA", "Customer.VATNumber"
-            ]
-          };
-          
-          // Find the actual headers in the file that match our required fields
-          const fieldMappings: Record<string, string> = {};
-          let missingFields: string[] = [];
-          
-          // Pour chaque champ requis, normaliser tous les noms possibles
-          const normalizedColumnMappings: Record<string, string[]> = {};
-          Object.entries(columnMappings).forEach(([fieldName, possibleNames]) => {
-            normalizedColumnMappings[fieldName] = possibleNames.map(name => normalizeText(name).toLowerCase());
-          });
-          
-          // For each of our required fields
-          Object.entries(normalizedColumnMappings).forEach(([fieldName, normalizedPossibleNames]) => {
-            // Skip firstName and lastName as they are optional and handled separately
-            if (fieldName === 'firstName' || fieldName === 'lastName') return;
+            if (!results.data || results.data.length === 0) {
+              setError("Le fichier CSV ne contient pas de données valides");
+              return;
+            }
+
+            const rawData = results.data as Record<string, any>[];
             
-            // Check if any of the possible column names exist in the headers
-            const normalizedHeaders = headers.map(header => normalizeText(header).toLowerCase());
-            const rawHeadersLower = rawHeaders.map(header => header.toLowerCase());
+            const normalizedData = rawData.map(row => {
+              const newRow: Record<string, any> = {};
+              Object.entries(row).forEach(([key, value]) => {
+                const normalizedKey = normalizeText(key);
+                const normalizedValue = typeof value === 'string' ? normalizeText(value) : value;
+                newRow[normalizedKey] = normalizedValue;
+              });
+              return newRow;
+            });
             
-            // Essaie de trouver un match en utilisant une comparaison insensible à la casse
-            let matchIndex = normalizedPossibleNames.findIndex(name => 
-              normalizedHeaders.some(header => header === name || header.includes(name))
-            );
+            const rawHeaders = Object.keys(normalizedData[0] || {});
+            console.log("En-têtes détectés:", rawHeaders);
             
-            if (matchIndex !== -1) {
-              // Trouver l'en-tête exact tel qu'il apparaît dans le fichier
-              const matchedNormalizedName = normalizedPossibleNames[matchIndex];
-              const headerIndex = normalizedHeaders.findIndex(
-                header => header === matchedNormalizedName || header.includes(matchedNormalizedName)
+            const columnMappings = {
+              date: [
+                "Facture.Date", "Date", "OrderDate", "InvoiceDate", "Date.Facture",
+                "Commande.Date", "DateFacture", "Invoice.Date", "Order.Date",
+                "Date.Commande", "Date.Order", "Date.Invoice", "DateFacturation"
+              ],
+              totalTaxes: [
+                "Commande.TotalTaxes", "TotalTaxes", "OrderTaxes", "Taxes", 
+                "MontantTaxes", "Commande.MontantTaxes", "Taxes.Total", "Montant.Taxes",
+                "Total.Taxes", "Taxes.Montant", "Montant.TVA", "TVA.Total"
+              ],
+              shippingVAT: [
+                "Livraison.MontantTVA", "ShippingVAT", "LivraisonTVA", "TVA.Livraison",
+                "Livraison.TVA", "TVALivraison", "Shipping.VAT", "DeliveryVAT",
+                "Frais.Livraison.TVA", "Shipping.Tax", "Tax.Shipping"
+              ],
+              totalAmount: [
+                "Commande.MontantTotal", "MontantTotal", "TotalAmount", "OrderTotal",
+                "Total", "Montant", "Commande.Total", "Order.Amount", "Total.Order",
+                "Montant.Commande", "Commande.Montant", "Total.Montant", "Amount.Total"
+              ],
+              company: [
+                "Facturation.Société", "Société", "Company", "CompanyName", "Entreprise",
+                "Facturation.Entreprise", "Facturation.Company", "Client.Société",
+                "Société", "Facturation.Société", "Client.Société", "Client.Company",
+                "Societe", "Facturation.Societe", "Client.Societe", "NomEntreprise",
+                "Nom.Entreprise", "RaisonSociale", "Raison.Sociale", "Nom.Societe",
+                "BusinessName", "Client.Name", "Customer.Company", "Client.BusinessName",
+                "Nom.Commercial", "Etablissement", "Nom.Etablissement"
+              ],
+              firstName: [
+                "Facturation.Prénom", "Facturation.Prenom", "Prénom", "Prenom", 
+                "FirstName", "Client.Prénom", "Client.Prenom"
+              ],
+              lastName: [
+                "Facturation.Nom", "Nom", "LastName", "Client.Nom", "Surname"
+              ],
+              vatNumber: [
+                "Société.NII", "NII", "VATNumber", "NumeroTVA", "TVA", "VAT",
+                "NumTVA", "Société.NII", "Société.TVA", "Company.VAT", "Company.VATNumber",
+                "NoTVA", "Numero.TVA", "Société.TVA", "Société.NumTVA", "TVA.Numero",
+                "Societe.NII", "Societe.TVA", "Societe.NumTVA", "NumeroTVA",
+                "NumeroFiscal", "IdentifiantTVA", "Identifiant.TVA", "Identifiant.Fiscal",
+                "SIRET", "SIREN", "Societe.SIRET", "Societe.SIREN", "Société.SIRET",
+                "Company.TaxID", "TaxID", "Tax.Number", "Numero.Fiscal", "ID.Fiscal",
+                "Client.TVA", "Client.NumTVA", "Customer.VATNumber"
+              ]
+            };
+            
+            const fieldMappings: Record<string, string> = {};
+            let missingFields: string[] = [];
+            
+            const normalizedColumnMappings: Record<string, string[]> = {};
+            Object.entries(columnMappings).forEach(([fieldName, possibleNames]) => {
+              normalizedColumnMappings[fieldName] = possibleNames.map(name => normalizeText(name));
+            });
+            
+            Object.entries(normalizedColumnMappings).forEach(([fieldName, normalizedPossibleNames]) => {
+              if (fieldName === 'firstName' || fieldName === 'lastName') return;
+              
+              const matchIndex = normalizedPossibleNames.findIndex(name => 
+                rawHeaders.some(header => normalizeText(header) === name || normalizeText(header).includes(name))
               );
               
-              if (headerIndex !== -1) {
-                fieldMappings[fieldName] = rawHeaders[headerIndex];
-                console.log(`Mapping trouvé pour ${fieldName}: ${fieldMappings[fieldName]}`);
-              }
-            } 
-            // Si aucun match direct, essayons une approche plus flexible pour les champs spécifiques
-            else if (fieldName === 'company' || fieldName === 'vatNumber') {
-              // Cherchons des en-têtes plus précis pour le nom de l'entreprise
-              if (fieldName === 'company') {
-                // D'abord, chercher des colonnes de noms réels d'entreprises
-                const companyNameIndex = rawHeaders.findIndex(header => 
-                  isActualCompanyNameColumn(normalizeText(header))
+              if (matchIndex !== -1) {
+                const matchedNormalizedName = normalizedPossibleNames[matchIndex];
+                const headerIndex = rawHeaders.findIndex(
+                  header => normalizeText(header) === matchedNormalizedName || normalizeText(header).includes(matchedNormalizedName)
                 );
                 
-                if (companyNameIndex !== -1) {
-                  fieldMappings[fieldName] = rawHeaders[companyNameIndex];
-                  console.log(`Mapping de nom réel d'entreprise trouvé: ${fieldMappings[fieldName]}`);
-                } else {
-                  // Ensuite, chercher n'importe quelle colonne liée à l'entreprise
-                  const companyRelatedIndex = rawHeaders.findIndex(header => 
-                    isCompanyRelatedColumn(normalizeText(header))
+                if (headerIndex !== -1) {
+                  fieldMappings[fieldName] = rawHeaders[headerIndex];
+                  console.log(`Mapping trouvé pour ${fieldName}: ${fieldMappings[fieldName]}`);
+                }
+              } 
+              else if (fieldName === 'company' || fieldName === 'vatNumber') {
+                if (fieldName === 'company') {
+                  const companyNameIndex = rawHeaders.findIndex(header => 
+                    isActualCompanyNameColumn(header)
                   );
                   
-                  if (companyRelatedIndex !== -1) {
-                    fieldMappings[fieldName] = rawHeaders[companyRelatedIndex];
-                    console.log(`Mapping d'entreprise générique trouvé: ${fieldMappings[fieldName]}`);
+                  if (companyNameIndex !== -1) {
+                    fieldMappings[fieldName] = rawHeaders[companyNameIndex];
+                    console.log(`Mapping de nom réel d'entreprise trouvé: ${fieldMappings[fieldName]}`);
                   } else {
-                    // Chercher les champs prénom et nom pour construire un nom de société
-                    const firstNameIndex = rawHeaders.findIndex(header => 
-                      normalizedColumnMappings.firstName.some(name => 
-                        normalizeText(header).toLowerCase().includes(name)
-                      )
+                    const companyRelatedIndex = rawHeaders.findIndex(header => 
+                      isCompanyRelatedColumn(header)
                     );
                     
-                    const lastNameIndex = rawHeaders.findIndex(header => 
-                      normalizedColumnMappings.lastName.some(name => 
-                        normalizeText(header).toLowerCase().includes(name)
-                      )
-                    );
-                    
-                    if (firstNameIndex !== -1) {
-                      fieldMappings['firstName'] = rawHeaders[firstNameIndex];
-                      console.log(`Mapping pour prénom trouvé: ${fieldMappings['firstName']}`);
-                    }
-                    
-                    if (lastNameIndex !== -1) {
-                      fieldMappings['lastName'] = rawHeaders[lastNameIndex];
-                      console.log(`Mapping pour nom trouvé: ${fieldMappings['lastName']}`);
-                    }
-                    
-                    if (firstNameIndex !== -1 || lastNameIndex !== -1) {
-                      // Utiliser un marqueur spécial pour indiquer qu'on doit construire le nom
-                      fieldMappings[fieldName] = "__person_name__";
-                      console.log(`Utilisation des champs de nom de personne pour l'entreprise`);
+                    if (companyRelatedIndex !== -1) {
+                      fieldMappings[fieldName] = rawHeaders[companyRelatedIndex];
+                      console.log(`Mapping d'entreprise générique trouvé: ${fieldMappings[fieldName]}`);
                     } else {
-                      // Utiliser un identifiant client comme dernier recours
-                      const clientIdIndex = rawHeaders.findIndex(header => 
-                        normalizeText(header).toLowerCase().includes("client.identifiant") ||
-                        normalizeText(header).toLowerCase().includes("client.id")
+                      const firstNameIndex = rawHeaders.findIndex(header => 
+                        normalizedColumnMappings.firstName.some(name => 
+                          normalizeText(header).includes(name)
+                        )
                       );
                       
-                      if (clientIdIndex !== -1) {
-                        fieldMappings[fieldName] = rawHeaders[clientIdIndex];
-                        console.log(`Utilisation d'identifiant client comme nom: ${fieldMappings[fieldName]}`);
+                      const lastNameIndex = rawHeaders.findIndex(header => 
+                        normalizedColumnMappings.lastName.some(name => 
+                          normalizeText(header).includes(name)
+                        )
+                      );
+                      
+                      if (firstNameIndex !== -1) {
+                        fieldMappings['firstName'] = rawHeaders[firstNameIndex];
+                        console.log(`Mapping pour prénom trouvé: ${fieldMappings['firstName']}`);
+                      }
+                      
+                      if (lastNameIndex !== -1) {
+                        fieldMappings['lastName'] = rawHeaders[lastNameIndex];
+                        console.log(`Mapping pour nom trouvé: ${fieldMappings['lastName']}`);
+                      }
+                      
+                      if (firstNameIndex !== -1 || lastNameIndex !== -1) {
+                        fieldMappings[fieldName] = "__person_name__";
+                        console.log(`Utilisation des champs de nom de personne pour l'entreprise`);
                       } else {
-                        console.warn("Aucune colonne d'entreprise trouvée, utilisation de valeurs par défaut");
-                        fieldMappings[fieldName] = "__company__"; // Marqueur spécial
+                        const clientIdIndex = rawHeaders.findIndex(header => 
+                          normalizeText(header).includes("client.identifiant") ||
+                          normalizeText(header).includes("client.id")
+                        );
+                        
+                        if (clientIdIndex !== -1) {
+                          fieldMappings[fieldName] = rawHeaders[clientIdIndex];
+                          console.log(`Utilisation d'identifiant client comme nom: ${fieldMappings[fieldName]}`);
+                        } else {
+                          console.warn("Aucune colonne d'entreprise trouvée, utilisation de valeurs par défaut");
+                          fieldMappings[fieldName] = "__company__";
+                        }
                       }
                     }
                   }
                 }
-              }
-              // Pour vatNumber, recherche similaire
-              else if (fieldName === 'vatNumber') {
-                const vatColumnIndex = rawHeaders.findIndex(header => 
-                  isVATNumberRelatedColumn(normalizeText(header))
-                );
-                
-                if (vatColumnIndex !== -1) {
-                  fieldMappings[fieldName] = rawHeaders[vatColumnIndex];
-                  console.log(`Mapping pour TVA trouvé: ${fieldMappings[fieldName]}`);
-                } else {
-                  console.warn("Aucune colonne de TVA trouvée, utilisation de valeurs par défaut");
-                  fieldMappings[fieldName] = "__vatNumber__"; // Marqueur spécial
+                else if (fieldName === 'vatNumber') {
+                  const vatColumnIndex = rawHeaders.findIndex(header => 
+                    isVATNumberRelatedColumn(header)
+                  );
+                  
+                  if (vatColumnIndex !== -1) {
+                    fieldMappings[fieldName] = rawHeaders[vatColumnIndex];
+                    console.log(`Mapping pour TVA trouvé: ${fieldMappings[fieldName]}`);
+                  } else {
+                    console.warn("Aucune colonne de TVA trouvée, utilisation de valeurs par défaut");
+                    fieldMappings[fieldName] = "__vatNumber__";
+                  }
                 }
               }
-            }
-            
-            // Si toujours pas de mapping et ce n'est pas company ou vatNumber
-            if (!fieldMappings[fieldName] && fieldName !== 'company' && fieldName !== 'vatNumber') {
-              missingFields.push(columnMappings[fieldName][0]); // Add the primary name of the missing field
-            }
-          });
-          
-          if (missingFields.length > 0) {
-            console.error("Colonnes manquantes:", missingFields);
-            setError(`Colonnes manquantes: ${missingFields.join(", ")}`);
-            return;
-          }
-
-          // Process the data using the mapped field names and handle encoding issues
-          const processedData = (results.data as any[]).map((row, index) => {
-            // Traitement du nom de l'entreprise selon le type de mapping trouvé
-            let companyName = "";
-            
-            if (fieldMappings.company === "__company__") {
-              companyName = `Client ${index + 1}`; // Valeur par défaut numérotée
-            } else if (fieldMappings.company === "__person_name__") {
-              // Construire un nom à partir des champs prénom et nom
-              const firstName = fieldMappings.firstName ? normalizeText(row[fieldMappings.firstName] || "") : "";
-              const lastName = fieldMappings.lastName ? normalizeText(row[fieldMappings.lastName] || "") : "";
               
-              if (firstName || lastName) {
-                companyName = `${firstName} ${lastName}`.trim();
-              } else {
-                companyName = `Client ${index + 1}`;
+              if (!fieldMappings[fieldName] && fieldName !== 'company' && fieldName !== 'vatNumber') {
+                missingFields.push(columnMappings[fieldName][0]);
               }
-            } else {
-              companyName = normalizeText(row[fieldMappings.company] || "");
+            });
+            
+            if (missingFields.length > 0) {
+              console.error("Colonnes manquantes:", missingFields);
+              setError(`Colonnes manquantes: ${missingFields.join(", ")}`);
+              return;
+            }
+
+            const processedData = normalizedData.map((row, index) => {
+              let companyName = "";
               
-              // Si le nom de l'entreprise semble être un identifiant numérique, essayons de le remplacer
-              if (/^\d+$/.test(companyName)) {
-                // Essayer d'utiliser prénom/nom si disponibles
+              if (fieldMappings.company === "__company__") {
+                companyName = `Client ${index + 1}`;
+              } else if (fieldMappings.company === "__person_name__") {
                 const firstName = fieldMappings.firstName ? normalizeText(row[fieldMappings.firstName] || "") : "";
                 const lastName = fieldMappings.lastName ? normalizeText(row[fieldMappings.lastName] || "") : "";
                 
                 if (firstName || lastName) {
                   companyName = `${firstName} ${lastName}`.trim();
                 } else {
-                  companyName = `Client ${companyName}`;
+                  companyName = `Client ${index + 1}`;
+                }
+              } else {
+                companyName = normalizeText(row[fieldMappings.company] || "");
+                
+                if (/^\d+$/.test(companyName)) {
+                  const firstName = fieldMappings.firstName ? normalizeText(row[fieldMappings.firstName] || "") : "";
+                  const lastName = fieldMappings.lastName ? normalizeText(row[fieldMappings.lastName] || "") : "";
+                  
+                  if (firstName || lastName) {
+                    companyName = `${firstName} ${lastName}`.trim();
+                  } else {
+                    companyName = `Client ${companyName}`;
+                  }
                 }
               }
-            }
-            
-            const totalTaxes = parseCommaNumber(row[fieldMappings.totalTaxes] || "0");
-            const shippingVAT = parseCommaNumber(row[fieldMappings.shippingVAT] || "0");
-            const totalAmount = parseCommaNumber(row[fieldMappings.totalAmount] || "0");
-            const totalVAT = totalTaxes + shippingVAT;
-            
-            // Traitement du numéro de TVA
-            let vatNumber = "";
-            if (fieldMappings.vatNumber === "__vatNumber__") {
-              vatNumber = `TVA${index + 1}`; // Valeur par défaut numérotée
-            } else {
-              vatNumber = cleanVATNumber(row[fieldMappings.vatNumber] || "");
-            }
-            
-            return {
-              id: `order-${index}`,
-              date: row[fieldMappings.date],
-              totalTaxes: totalTaxes,
-              shippingVAT: shippingVAT,
-              totalAmount: totalAmount,
-              company: companyName,
-              vatNumber: vatNumber,
-              totalVAT: totalVAT
-            };
-          });
+              
+              const totalTaxes = parseCommaNumber(row[fieldMappings.totalTaxes] || "0");
+              const shippingVAT = parseCommaNumber(row[fieldMappings.shippingVAT] || "0");
+              const totalAmount = parseCommaNumber(row[fieldMappings.totalAmount] || "0");
+              const totalVAT = totalTaxes + shippingVAT;
+              
+              let vatNumber = "";
+              if (fieldMappings.vatNumber === "__vatNumber__") {
+                vatNumber = `TVA${index + 1}`;
+              } else {
+                vatNumber = cleanVATNumber(row[fieldMappings.vatNumber] || "");
+              }
+              
+              return {
+                id: `order-${index}`,
+                date: row[fieldMappings.date],
+                totalTaxes: totalTaxes,
+                shippingVAT: shippingVAT,
+                totalAmount: totalAmount,
+                company: companyName,
+                vatNumber: vatNumber,
+                totalVAT: totalVAT
+              };
+            });
 
-          console.log("Données traitées:", processedData.slice(0, 2));
-          onImportSuccess(processedData);
-        } catch (err) {
-          console.error("Erreur lors du traitement:", err);
-          setError(`Erreur lors du traitement des données: ${(err as Error).message}`);
+            console.log("Données traitées:", processedData.slice(0, 2));
+            onImportSuccess(processedData);
+          } catch (err) {
+            console.error("Erreur lors du traitement:", err);
+            setError(`Erreur lors du traitement des données: ${(err as Error).message}`);
+          }
+        },
+        error: (err) => {
+          console.error("Erreur de parsing:", err);
+          setIsProcessing(false);
+          setError(`Erreur lors de l'analyse du fichier: ${err.message}`);
         }
-      },
-      error: (err) => {
-        console.error("Erreur de parsing:", err);
-        setIsProcessing(false);
-        setError(`Erreur lors de l'analyse du fichier: ${err.message}`);
-      }
-    });
+      });
+    };
+    
+    reader.onerror = () => {
+      setIsProcessing(false);
+      setError("Erreur lors de la lecture du fichier");
+    };
+    
+    reader.readAsText(file, 'ISO-8859-1');
   };
 
   return (
