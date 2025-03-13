@@ -1,11 +1,76 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
+import { CSVImporter } from "@/components/CSVImporter";
+import { DataDisplay } from "@/components/DataDisplay";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { toast } from "@/components/ui/use-toast";
+
+// Types for our data model
+export interface OrderData {
+  id: string;
+  date: string;
+  totalTaxes: number;
+  shippingVAT: number;
+  totalAmount: number;
+  company: string;
+  vatNumber: string;
+  totalVAT: number;
+}
 
 const Index = () => {
+  const [data, setData] = useLocalStorage<OrderData[]>("ecommerce-orders", []);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleImportSuccess = (importedData: OrderData[]) => {
+    setData(importedData);
+    setIsImporting(false);
+    toast({
+      title: "Import réussi",
+      description: `${importedData.length} commandes ont été importées avec succès.`,
+    });
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col gap-8">
+        <header className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold">Gestionnaire de Commandes E-commerce</h1>
+          <p className="text-muted-foreground">
+            Importez, analysez et exportez vos données de commandes.
+          </p>
+        </header>
+
+        {data.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-6 rounded-lg border border-dashed p-12 text-center">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+              <Upload className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-medium">Aucune donnée importée</h3>
+              <p className="text-sm text-muted-foreground">
+                Commencez par importer votre fichier CSV contenant les données de commandes.
+              </p>
+            </div>
+            <Button onClick={() => setIsImporting(true)}>Importer un fichier CSV</Button>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex justify-between">
+              <h2 className="text-xl font-semibold">Données importées ({data.length} commandes)</h2>
+              <Button onClick={() => setIsImporting(true)}>Importer un nouveau fichier</Button>
+            </div>
+            <DataDisplay data={data} />
+          </div>
+        )}
+
+        {isImporting && (
+          <CSVImporter 
+            onCancel={() => setIsImporting(false)} 
+            onImportSuccess={handleImportSuccess} 
+          />
+        )}
       </div>
     </div>
   );
