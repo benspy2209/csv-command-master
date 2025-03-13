@@ -101,14 +101,99 @@ export function DataFilters({
             />
           </div>
           
-          <CollapsibleTrigger
-            asChild
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            <Button variant="outline" size="sm" className="h-9">
-              {isOpen ? "Masquer les filtres" : "Plus de filtres"}
-            </Button>
-          </CollapsibleTrigger>
+          <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9">
+                {isOpen ? "Masquer les filtres" : "Plus de filtres"}
+              </Button>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent>
+              <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label>Période</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {months.map(month => (
+                      <Button
+                        key={month}
+                        variant={selectedMonth === month ? "default" : "outline"}
+                        size="sm"
+                        className="justify-start"
+                        onClick={() => onMonthChange(month === selectedMonth ? null : month)}
+                      >
+                        {formatMonth(month)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <Label>Société</Label>
+                    <Select 
+                      value={selectedCompany || ""} 
+                      onValueChange={(value) => onCompanyChange(value || null)}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Toutes les sociétés" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Toutes les sociétés</SelectItem>
+                        {companies.map(company => (
+                          <SelectItem key={company} value={company}>{company}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label>Montant (€)</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={localMinAmount}
+                        onChange={(e) => setLocalMinAmount(e.target.value)}
+                        className="w-24"
+                      />
+                      <span>-</span>
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={localMaxAmount}
+                        onChange={(e) => setLocalMaxAmount(e.target.value)}
+                        className="w-24"
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={applyAmountFilter}
+                        variant="outline"
+                      >
+                        Appliquer
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="intracom" 
+                      checked={showIntracomOnly}
+                      onCheckedChange={(checked) => onIntracomChange(checked === true)}
+                    />
+                    <label
+                      htmlFor="intracom"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Afficher uniquement les commandes intracom
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Commandes avec TVA à 0€ et numéro de TVA renseigné
+                  </p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
           
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9">
@@ -118,94 +203,6 @@ export function DataFilters({
           )}
         </div>
       </div>
-      
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleContent>
-          <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
-            <div className="space-y-2">
-              <Label>Période</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                {months.map(month => (
-                  <Button
-                    key={month}
-                    variant={selectedMonth === month ? "default" : "outline"}
-                    size="sm"
-                    className="justify-start"
-                    onClick={() => onMonthChange(month === selectedMonth ? null : month)}
-                  >
-                    {formatMonth(month)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <Label>Société</Label>
-                <Select 
-                  value={selectedCompany || ""} 
-                  onValueChange={(value) => onCompanyChange(value || null)}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Toutes les sociétés" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Toutes les sociétés</SelectItem>
-                    {companies.map(company => (
-                      <SelectItem key={company} value={company}>{company}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label>Montant (€)</Label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input
-                    type="number"
-                    placeholder="Min"
-                    value={localMinAmount}
-                    onChange={(e) => setLocalMinAmount(e.target.value)}
-                    className="w-24"
-                  />
-                  <span>-</span>
-                  <Input
-                    type="number"
-                    placeholder="Max"
-                    value={localMaxAmount}
-                    onChange={(e) => setLocalMaxAmount(e.target.value)}
-                    className="w-24"
-                  />
-                  <Button 
-                    size="sm" 
-                    onClick={applyAmountFilter}
-                    variant="outline"
-                  >
-                    Appliquer
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="intracom" 
-                  checked={showIntracomOnly}
-                  onCheckedChange={(checked) => onIntracomChange(checked === true)}
-                />
-                <label
-                  htmlFor="intracom"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Afficher uniquement les commandes intracom
-                </label>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Commandes avec TVA à 0€ et numéro de TVA renseigné
-              </p>
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
       
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2 pt-3 border-t">
