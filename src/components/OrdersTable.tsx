@@ -39,7 +39,7 @@ export function OrdersTable({ filteredData }: OrdersTableProps) {
           {filteredData.map((order) => (
             <TableRow key={order.id}>
               <TableCell>{order.date}</TableCell>
-              <TableCell>{order.company}</TableCell>
+              <TableCell>{fixEncodingIssues(order.company)}</TableCell>
               <TableCell>{order.vatNumber || "-"}</TableCell>
               <TableCell className="text-right">
                 {formatCurrency(Number(order.totalAmount) - Number(order.totalVAT))}
