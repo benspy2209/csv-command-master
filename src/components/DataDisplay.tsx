@@ -1,16 +1,19 @@
+
 import { useState, useMemo } from "react";
 import { OrderData } from "@/pages/Index";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataVisualization } from "@/components/DataVisualization";
-import { DataFilters } from "@/components/DataFilters";
+import { DataFilters, ViewMode } from "@/components/DataFilters";
 import { OrdersTable } from "@/components/OrdersTable";
+import { ConsolidatedIntracomTable } from "@/components/ConsolidatedIntracomTable";
 import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { ExportButtons } from "@/components/ExportButtons";
 import { 
   getUniqueMonths, 
   getUniqueCompanies, 
   filterData, 
-  calculateStats 
+  calculateStats,
+  consolidateIntracomData
 } from "@/utils/dataProcessingUtils";
 
 interface DataDisplayProps {
@@ -20,6 +23,7 @@ interface DataDisplayProps {
 export function DataDisplay({ data }: DataDisplayProps) {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [showIntracomOnly, setShowIntracomOnly] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [minAmount, setMinAmount] = useState<number | null>(null);
   const [maxAmount, setMaxAmount] = useState<number | null>(null);
@@ -40,23 +44,40 @@ export function DataDisplay({ data }: DataDisplayProps) {
     setMaxAmount(max);
   };
 
+  // Determine if we should apply intracom filter based on view mode
+  const effectiveIntracomFilter = viewMode === "intracom" || viewMode === "consolidated" || showIntracomOnly;
+
   const filteredData = useMemo(() => 
     filterData(
       data, 
       selectedMonth, 
-      showIntracomOnly,
+      effectiveIntracomFilter,
       selectedCompany,
       minAmount,
       maxAmount,
       searchTerm
     ), 
-    [data, selectedMonth, showIntracomOnly, selectedCompany, minAmount, maxAmount, searchTerm]
+    [data, selectedMonth, effectiveIntracomFilter, selectedCompany, minAmount, maxAmount, searchTerm]
+  );
+
+  const consolidatedData = useMemo(() => 
+    consolidateIntracomData(filteredData),
+    [filteredData]
   );
 
   const stats = useMemo(() => 
     calculateStats(filteredData), 
     [filteredData]
   );
+
+  // Sync view mode and intracom filter
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    if (mode === "intracom" || mode === "consolidated") {
+      // If enabling intracom or consolidated view, disable the advanced intracom filter
+      setShowIntracomOnly(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -66,6 +87,8 @@ export function DataDisplay({ data }: DataDisplayProps) {
         onMonthChange={setSelectedMonth}
         showIntracomOnly={showIntracomOnly}
         onIntracomChange={setShowIntracomOnly}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
         companies={companies}
         selectedCompany={selectedCompany}
         onCompanyChange={setSelectedCompany}
@@ -81,8 +104,10 @@ export function DataDisplay({ data }: DataDisplayProps) {
         <ExportButtons 
           filteredData={filteredData}
           selectedMonth={selectedMonth}
-          showIntracomOnly={showIntracomOnly}
+          showIntracomOnly={effectiveIntracomFilter}
           stats={stats}
+          viewMode={viewMode}
+          consolidatedData={consolidatedData}
         />
       </div>
 
@@ -93,7 +118,11 @@ export function DataDisplay({ data }: DataDisplayProps) {
         </TabsList>
       
         <TabsContent value="table" className="mt-4">
-          <OrdersTable filteredData={filteredData} />
+          {viewMode === "consolidated" ? (
+            <ConsolidatedIntracomTable consolidatedData={consolidatedData} />
+          ) : (
+            <OrdersTable filteredData={filteredData} />
+          )}
         </TabsContent>
         
         <TabsContent value="charts" className="mt-4">

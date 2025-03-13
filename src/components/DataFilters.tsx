@@ -9,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+
+export type ViewMode = "all" | "intracom" | "consolidated";
 
 interface DataFiltersProps {
   months: string[];
@@ -16,6 +19,8 @@ interface DataFiltersProps {
   onMonthChange: (month: string | null) => void;
   showIntracomOnly: boolean;
   onIntracomChange: (show: boolean) => void;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
   companies: string[];
   onCompanyChange: (company: string | null) => void;
   selectedCompany: string | null;
@@ -32,6 +37,8 @@ export function DataFilters({
   onMonthChange, 
   showIntracomOnly, 
   onIntracomChange,
+  viewMode,
+  onViewModeChange,
   companies,
   onCompanyChange,
   selectedCompany,
@@ -61,6 +68,7 @@ export function DataFilters({
 
   const resetFilters = () => {
     onMonthChange(null);
+    onViewModeChange("all");
     onIntracomChange(false);
     onCompanyChange(null);
     onAmountChange(null, null);
@@ -75,7 +83,7 @@ export function DataFilters({
     onAmountChange(min, max);
   };
 
-  const hasActiveFilters = selectedMonth !== null || showIntracomOnly || 
+  const hasActiveFilters = selectedMonth !== null || viewMode !== "all" || 
     selectedCompany !== null || minAmount !== null || maxAmount !== null || searchTerm !== "";
 
   return (
@@ -115,19 +123,24 @@ export function DataFilters({
             </SelectContent>
           </Select>
           
-          <div className="flex items-center space-x-2 bg-background rounded-md px-3 py-1 border">
-            <Checkbox 
-              id="intracom-main" 
-              checked={showIntracomOnly}
-              onCheckedChange={(checked) => onIntracomChange(checked === true)}
-            />
-            <label
-              htmlFor="intracom-main"
-              className="text-sm font-medium leading-none cursor-pointer"
-            >
-              Intracom uniquement
-            </label>
-          </div>
+          <ToggleGroup 
+            type="single" 
+            value={viewMode}
+            onValueChange={(value) => {
+              if (value) onViewModeChange(value as ViewMode);
+            }}
+            className="border rounded-md h-9"
+          >
+            <ToggleGroupItem value="all" className="h-9">
+              Toutes les ventes
+            </ToggleGroupItem>
+            <ToggleGroupItem value="intracom" className="h-9">
+              Intracom
+            </ToggleGroupItem>
+            <ToggleGroupItem value="consolidated" className="h-9">
+              Intracom consolidée
+            </ToggleGroupItem>
+          </ToggleGroup>
           
           <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <CollapsibleTrigger asChild>
@@ -202,9 +215,31 @@ export function DataFilters({
                     </div>
                   </div>
                   
-                  <p className="text-xs text-muted-foreground">
-                    Commandes intracom : TVA à 0€ et numéro de TVA renseigné
-                  </p>
+                  <div className="space-y-1">
+                    <Label>Options avancées</Label>
+                    <div className="flex items-center space-x-2 rounded-md px-3 py-1">
+                      <Checkbox 
+                        id="intracom-advanced" 
+                        checked={showIntracomOnly}
+                        onCheckedChange={(checked) => {
+                          onIntracomChange(checked === true);
+                          // Si on active l'intracom dans les filtres avancés, on désactive la vue consolidée
+                          if (checked === true) {
+                            onViewModeChange("intracom");
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="intracom-advanced"
+                        className="text-sm font-medium leading-none cursor-pointer"
+                      >
+                        Afficher uniquement les ventes intracom
+                      </label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Commandes intracom : TVA à 0€ et numéro de TVA renseigné
+                    </p>
+                  </div>
                 </div>
               </div>
             </CollapsibleContent>
@@ -230,6 +265,16 @@ export function DataFilters({
               onClick={() => onMonthChange(null)}
             >
               {formatMonth(selectedMonth)} ✕
+            </Button>
+          )}
+          {viewMode !== "all" && (
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              className="h-7 text-xs"
+              onClick={() => onViewModeChange("all")}
+            >
+              {viewMode === "intracom" ? "Intracom" : "Intracom consolidée"} ✕
             </Button>
           )}
           {selectedCompany && (
@@ -259,7 +304,7 @@ export function DataFilters({
               className="h-7 text-xs"
               onClick={() => onIntracomChange(false)}
             >
-              Intracom uniquement ✕
+              Ventes intracom (filtre avancé) ✕
             </Button>
           )}
           {searchTerm && (

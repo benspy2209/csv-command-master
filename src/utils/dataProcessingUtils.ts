@@ -1,4 +1,3 @@
-
 import { OrderData } from "@/pages/Index";
 import { format, parse, isValid, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -72,6 +71,52 @@ const parseCommaNumber = (value: string | number): number => {
   if (!value || value.trim() === "") return 0;
   // Remplacer la virgule par un point pour l'analyse numérique correcte
   return parseFloat(value.replace(",", "."));
+};
+
+// Consolider les données intracom par client
+export const consolidateIntracomData = (filteredData: OrderData[]) => {
+  const consolidatedData: {
+    company: string;
+    vatNumber: string;
+    totalAmount: number;
+    orderCount: number;
+    originalOrders: OrderData[];
+  }[] = [];
+
+  // Filtrer uniquement les commandes intracom (TVA à 0 et numéro de TVA présent)
+  const intracomOrders = filteredData.filter(order => 
+    order.totalVAT === 0 && 
+    order.vatNumber && 
+    order.vatNumber.trim() !== ""
+  );
+
+  // Grouper par numéro de TVA
+  const groupedByVAT: Record<string, OrderData[]> = {};
+  
+  intracomOrders.forEach(order => {
+    const vatKey = order.vatNumber;
+    if (!groupedByVAT[vatKey]) {
+      groupedByVAT[vatKey] = [];
+    }
+    groupedByVAT[vatKey].push(order);
+  });
+
+  // Créer une ligne consolidée pour chaque client (numéro de TVA)
+  Object.entries(groupedByVAT).forEach(([vatNumber, orders]) => {
+    const firstOrder = orders[0];
+    const totalAmount = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    
+    consolidatedData.push({
+      company: firstOrder.company,
+      vatNumber: vatNumber,
+      totalAmount: totalAmount,
+      orderCount: orders.length,
+      originalOrders: orders
+    });
+  });
+
+  // Trier par montant total décroissant
+  return consolidatedData.sort((a, b) => b.totalAmount - a.totalAmount);
 };
 
 // Filtrer les données selon les critères
