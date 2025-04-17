@@ -100,22 +100,24 @@ export function DataFilters({
     }
   };
 
-  // Sélecteurs de trimestres
+  // Sélecteurs de trimestres - CORRIGÉ
   const selectQuarter = (quarter: number, year: string) => {
-    const yearPrefix = year;
     const quarterMonths = [];
     
     // Déterminer quels mois appartiennent au trimestre sélectionné
     for (let i = 0; i < 3; i++) {
       const monthNum = (quarter - 1) * 3 + i + 1;
       const monthStr = monthNum < 10 ? `0${monthNum}` : `${monthNum}`;
-      const monthKey = `${yearPrefix}-${monthStr}`;
+      const monthKey = `${year}-${monthStr}`;
       
       // Vérifier si ce mois existe dans nos données
       if (months.includes(monthKey)) {
         quarterMonths.push(monthKey);
       }
     }
+    
+    // Si aucun mois trouvé pour ce trimestre, ne rien faire
+    if (quarterMonths.length === 0) return;
     
     // Ajouter ces mois à la sélection, en évitant les doublons
     const newSelection = [...selectedMonths];
