@@ -1,3 +1,4 @@
+
 import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
@@ -110,6 +111,7 @@ export function DataFilters({
     const monthsForQuarter = quarterMap[quarter as keyof typeof quarterMap];
     const quarterMonths = [];
     
+    // Find which months from this quarter exist in our available months
     for (const monthStr of monthsForQuarter) {
       const monthKey = `${year}-${monthStr}`;
       if (months.includes(monthKey)) {
@@ -119,6 +121,7 @@ export function DataFilters({
     
     if (quarterMonths.length === 0) return;
     
+    // Create a new selection by adding these months (avoiding duplicates)
     const newSelection = [...selectedMonths];
     quarterMonths.forEach(month => {
       if (!newSelection.includes(month)) {
@@ -129,6 +132,7 @@ export function DataFilters({
     onMonthsChange(newSelection);
   };
 
+  // Group months by year
   const monthsByYear: Record<string, string[]> = {};
   months.forEach(month => {
     const year = month.split('-')[0];
@@ -138,7 +142,15 @@ export function DataFilters({
     monthsByYear[year].push(month);
   });
 
+  // Sort years in descending order
   const years = Object.keys(monthsByYear).sort((a, b) => b.localeCompare(a));
+
+  // Get month name from month key (format: yyyy-MM)
+  const getMonthName = (monthKey: string) => {
+    const month = monthKey.split('-')[1];
+    const date = parse(month, "MM", new Date());
+    return format(date, "MMMM", { locale: fr });
+  };
 
   return (
     <div className="bg-muted/30 p-4 rounded-lg space-y-4">
@@ -241,7 +253,13 @@ export function DataFilters({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="justify-start"
+                            className={`justify-start ${
+                              [`${year}-01`, `${year}-02`, `${year}-03`].every(m => 
+                                selectedMonths.includes(m) && months.includes(m)
+                              ) && 
+                              [`${year}-01`, `${year}-02`, `${year}-03`].some(m => months.includes(m)) 
+                                ? "bg-primary/20" : ""
+                            }`}
                             onClick={() => selectQuarter(1, year)}
                           >
                             T1 {year}
@@ -249,7 +267,13 @@ export function DataFilters({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="justify-start"
+                            className={`justify-start ${
+                              [`${year}-04`, `${year}-05`, `${year}-06`].every(m => 
+                                selectedMonths.includes(m) && months.includes(m)
+                              ) && 
+                              [`${year}-04`, `${year}-05`, `${year}-06`].some(m => months.includes(m)) 
+                                ? "bg-primary/20" : ""
+                            }`}
                             onClick={() => selectQuarter(2, year)}
                           >
                             T2 {year}
@@ -257,7 +281,13 @@ export function DataFilters({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="justify-start"
+                            className={`justify-start ${
+                              [`${year}-07`, `${year}-08`, `${year}-09`].every(m => 
+                                selectedMonths.includes(m) && months.includes(m)
+                              ) && 
+                              [`${year}-07`, `${year}-08`, `${year}-09`].some(m => months.includes(m)) 
+                                ? "bg-primary/20" : ""
+                            }`}
                             onClick={() => selectQuarter(3, year)}
                           >
                             T3 {year}
@@ -265,28 +295,47 @@ export function DataFilters({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="justify-start"
+                            className={`justify-start ${
+                              [`${year}-10`, `${year}-11`, `${year}-12`].every(m => 
+                                selectedMonths.includes(m) && months.includes(m)
+                              ) && 
+                              [`${year}-10`, `${year}-11`, `${year}-12`].some(m => months.includes(m)) 
+                                ? "bg-primary/20" : ""
+                            }`}
                             onClick={() => selectQuarter(4, year)}
                           >
                             T4 {year}
                           </Button>
                         </div>
                         <div className="grid grid-cols-3 gap-1">
-                          {monthsByYear[year].map(month => (
-                            <div key={month} className="flex items-center space-x-2 rounded-md px-2 py-1">
-                              <Checkbox 
-                                id={`month-${month}`}
-                                checked={selectedMonths.includes(month)}
-                                onCheckedChange={() => toggleMonth(month)}
-                              />
-                              <label
-                                htmlFor={`month-${month}`}
-                                className="text-sm cursor-pointer"
-                              >
-                                {formatMonth(month).split(' ')[0]}
-                              </label>
-                            </div>
-                          ))}
+                          {monthsByYear[year]
+                            .sort((a, b) => a.localeCompare(b)) // Sort months chronologically
+                            .map(month => {
+                              const monthNum = parseInt(month.split('-')[1]);
+                              // Map month numbers to French month names
+                              const monthNames = [
+                                "janvier", "février", "mars", "avril", "mai", "juin",
+                                "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+                              ];
+                              const monthName = monthNames[monthNum - 1];
+                              
+                              return (
+                                <div key={month} className="flex items-center space-x-2 rounded-md px-2 py-1">
+                                  <Checkbox 
+                                    id={`month-${month}`}
+                                    checked={selectedMonths.includes(month)}
+                                    onCheckedChange={() => toggleMonth(month)}
+                                  />
+                                  <label
+                                    htmlFor={`month-${month}`}
+                                    className="text-sm cursor-pointer"
+                                  >
+                                    {monthName}
+                                  </label>
+                                </div>
+                              );
+                            })
+                          }
                         </div>
                       </div>
                     ))}
