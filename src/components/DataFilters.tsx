@@ -100,28 +100,24 @@ export function DataFilters({
     }
   };
 
+  // Sélecteurs de trimestres
   const selectQuarter = (quarter: number, year: string) => {
-    const quarterMap = {
-      1: ["01", "02", "03"],
-      2: ["04", "05", "06"],
-      3: ["07", "08", "09"],
-      4: ["10", "11", "12"]
-    };
-    
-    const monthsForQuarter = quarterMap[quarter as keyof typeof quarterMap];
+    const yearPrefix = year;
     const quarterMonths = [];
     
-    // Find which months from this quarter exist in our available months
-    for (const monthStr of monthsForQuarter) {
-      const monthKey = `${year}-${monthStr}`;
+    // Déterminer quels mois appartiennent au trimestre sélectionné
+    for (let i = 0; i < 3; i++) {
+      const monthNum = (quarter - 1) * 3 + i + 1;
+      const monthStr = monthNum < 10 ? `0${monthNum}` : `${monthNum}`;
+      const monthKey = `${yearPrefix}-${monthStr}`;
+      
+      // Vérifier si ce mois existe dans nos données
       if (months.includes(monthKey)) {
         quarterMonths.push(monthKey);
       }
     }
     
-    if (quarterMonths.length === 0) return;
-    
-    // Create a new selection by adding these months (avoiding duplicates)
+    // Ajouter ces mois à la sélection, en évitant les doublons
     const newSelection = [...selectedMonths];
     quarterMonths.forEach(month => {
       if (!newSelection.includes(month)) {
@@ -132,7 +128,7 @@ export function DataFilters({
     onMonthsChange(newSelection);
   };
 
-  // Group months by year
+  // Grouper les mois par année
   const monthsByYear: Record<string, string[]> = {};
   months.forEach(month => {
     const year = month.split('-')[0];
@@ -142,15 +138,8 @@ export function DataFilters({
     monthsByYear[year].push(month);
   });
 
-  // Sort years in descending order
+  // Trier les années par ordre décroissant
   const years = Object.keys(monthsByYear).sort((a, b) => b.localeCompare(a));
-
-  // Get month name from month key (format: yyyy-MM)
-  const getMonthName = (monthKey: string) => {
-    const month = monthKey.split('-')[1];
-    const date = parse(month, "MM", new Date());
-    return format(date, "MMMM", { locale: fr });
-  };
 
   return (
     <div className="bg-muted/30 p-4 rounded-lg space-y-4">
@@ -253,13 +242,7 @@ export function DataFilters({
                           <Button
                             variant="outline"
                             size="sm"
-                            className={`justify-start ${
-                              [`${year}-01`, `${year}-02`, `${year}-03`].every(m => 
-                                selectedMonths.includes(m) && months.includes(m)
-                              ) && 
-                              [`${year}-01`, `${year}-02`, `${year}-03`].some(m => months.includes(m)) 
-                                ? "bg-primary/20" : ""
-                            }`}
+                            className="justify-start"
                             onClick={() => selectQuarter(1, year)}
                           >
                             T1 {year}
@@ -267,13 +250,7 @@ export function DataFilters({
                           <Button
                             variant="outline"
                             size="sm"
-                            className={`justify-start ${
-                              [`${year}-04`, `${year}-05`, `${year}-06`].every(m => 
-                                selectedMonths.includes(m) && months.includes(m)
-                              ) && 
-                              [`${year}-04`, `${year}-05`, `${year}-06`].some(m => months.includes(m)) 
-                                ? "bg-primary/20" : ""
-                            }`}
+                            className="justify-start"
                             onClick={() => selectQuarter(2, year)}
                           >
                             T2 {year}
@@ -281,13 +258,7 @@ export function DataFilters({
                           <Button
                             variant="outline"
                             size="sm"
-                            className={`justify-start ${
-                              [`${year}-07`, `${year}-08`, `${year}-09`].every(m => 
-                                selectedMonths.includes(m) && months.includes(m)
-                              ) && 
-                              [`${year}-07`, `${year}-08`, `${year}-09`].some(m => months.includes(m)) 
-                                ? "bg-primary/20" : ""
-                            }`}
+                            className="justify-start"
                             onClick={() => selectQuarter(3, year)}
                           >
                             T3 {year}
@@ -295,47 +266,28 @@ export function DataFilters({
                           <Button
                             variant="outline"
                             size="sm"
-                            className={`justify-start ${
-                              [`${year}-10`, `${year}-11`, `${year}-12`].every(m => 
-                                selectedMonths.includes(m) && months.includes(m)
-                              ) && 
-                              [`${year}-10`, `${year}-11`, `${year}-12`].some(m => months.includes(m)) 
-                                ? "bg-primary/20" : ""
-                            }`}
+                            className="justify-start"
                             onClick={() => selectQuarter(4, year)}
                           >
                             T4 {year}
                           </Button>
                         </div>
                         <div className="grid grid-cols-3 gap-1">
-                          {monthsByYear[year]
-                            .sort((a, b) => a.localeCompare(b)) // Sort months chronologically
-                            .map(month => {
-                              const monthNum = parseInt(month.split('-')[1]);
-                              // Map month numbers to French month names
-                              const monthNames = [
-                                "janvier", "février", "mars", "avril", "mai", "juin",
-                                "juillet", "août", "septembre", "octobre", "novembre", "décembre"
-                              ];
-                              const monthName = monthNames[monthNum - 1];
-                              
-                              return (
-                                <div key={month} className="flex items-center space-x-2 rounded-md px-2 py-1">
-                                  <Checkbox 
-                                    id={`month-${month}`}
-                                    checked={selectedMonths.includes(month)}
-                                    onCheckedChange={() => toggleMonth(month)}
-                                  />
-                                  <label
-                                    htmlFor={`month-${month}`}
-                                    className="text-sm cursor-pointer"
-                                  >
-                                    {monthName}
-                                  </label>
-                                </div>
-                              );
-                            })
-                          }
+                          {monthsByYear[year].map(month => (
+                            <div key={month} className="flex items-center space-x-2 rounded-md px-2 py-1">
+                              <Checkbox 
+                                id={`month-${month}`}
+                                checked={selectedMonths.includes(month)}
+                                onCheckedChange={() => toggleMonth(month)}
+                              />
+                              <label
+                                htmlFor={`month-${month}`}
+                                className="text-sm cursor-pointer"
+                              >
+                                {formatMonth(month).split(' ')[0]}
+                              </label>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
@@ -397,6 +349,7 @@ export function DataFilters({
                         checked={showIntracomOnly}
                         onCheckedChange={(checked) => {
                           onIntracomChange(checked === true);
+                          // Si on active l'intracom dans les filtres avancés, on désactive la vue consolidée
                           if (checked === true) {
                             onViewModeChange("intracom");
                           }
