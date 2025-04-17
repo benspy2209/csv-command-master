@@ -1,4 +1,3 @@
-
 import { OrderData } from "@/pages/Index";
 import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -143,8 +142,11 @@ export const exportToPDF = (
   doc.setFontSize(12);
   doc.text("Récapitulatif comptable", 14, 30);
   
+  // Positions initiales pour le placement des tableaux
+  let startY = 35;
+  
   autoTable(doc, {
-    startY: 35,
+    startY: startY,
     head: [['Catégorie', 'Montant HT', 'TVA', 'Montant TTC']],
     body: [
       ['Total général', 
@@ -169,12 +171,15 @@ export const exportToPDF = (
     styles: { fontSize: 10 }
   });
   
+  // Récupérer la position finale Y du tableau
+  const finalY = (doc as any).lastAutoTable?.finalY || 95;
+  
   // Statistiques générales
-  doc.text(`Nombre de commandes: ${stats.orderCount}`, 14, doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : 95);
+  doc.text(`Nombre de commandes: ${stats.orderCount}`, 14, finalY + 10);
   
   // Tableau des commandes
   autoTable(doc, {
-    startY: doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : 105,
+    startY: finalY + 15,
     head: [['Date', 'Société', 'N° TVA', 'Montant HT', 'TVA', 'Total']],
     body: filteredData.map(order => [
       order.date,
