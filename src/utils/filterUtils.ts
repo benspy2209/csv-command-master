@@ -20,22 +20,23 @@ export const getUniqueCompanies = (data: OrderData[]) => {
 // Filtrer les données selon les critères
 export const filterData = (
   data: OrderData[], 
-  selectedMonth: string | null, 
+  selectedMonths: string[], 
   showIntracomOnly: boolean,
   selectedCompany: string | null,
   minAmount: number | null,
   maxAmount: number | null,
-  searchTerm: string
+  searchTerm: string,
+  dateRange: { start: Date | null; end: Date | null } | null
 ) => {
   return data.filter(order => {
     let keepItem = true;
     
-    // Filtre par mois - ne filtrer que si selectedMonth n'est pas null
-    if (selectedMonth) {
+    // Filtre par mois - ne filtrer que si selectedMonths n'est pas vide
+    if (selectedMonths.length > 0) {
       const date = parseOrderDate(order.date);
       if (date) {
         const orderMonth = format(date, "yyyy-MM");
-        if (orderMonth !== selectedMonth) {
+        if (!selectedMonths.includes(orderMonth)) {
           keepItem = false;
         }
       } else {
@@ -77,6 +78,24 @@ export const filterData = (
       
       if (!(matchesCompany || matchesId || matchesVat)) {
         keepItem = false;
+      }
+    }
+    
+    // Filtre par plage de dates (si applicable)
+    if (dateRange && (dateRange.start || dateRange.end)) {
+      const orderDate = parseOrderDate(order.date);
+      if (orderDate) {
+        if (dateRange.start && orderDate < dateRange.start) {
+          keepItem = false;
+        }
+        if (dateRange.end) {
+          // On inclut la journée entière de fin
+          const endOfDay = new Date(dateRange.end);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (orderDate > endOfDay) {
+            keepItem = false;
+          }
+        }
       }
     }
     

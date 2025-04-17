@@ -15,8 +15,8 @@ export type ViewMode = "all" | "intracom" | "consolidated";
 
 interface DataFiltersProps {
   months: string[];
-  selectedMonth: string | null;
-  onMonthChange: (month: string | null) => void;
+  selectedMonths: string[];
+  onMonthsChange: (months: string[]) => void;
   showIntracomOnly: boolean;
   onIntracomChange: (show: boolean) => void;
   viewMode: ViewMode;
@@ -29,12 +29,14 @@ interface DataFiltersProps {
   onAmountChange: (min: number | null, max: number | null) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  dateRange: { start: Date | null; end: Date | null } | null;
+  onDateRangeChange: (range: { start: Date | null; end: Date | null } | null) => void;
 }
 
 export function DataFilters({ 
   months, 
-  selectedMonth, 
-  onMonthChange, 
+  selectedMonths, 
+  onMonthsChange, 
   showIntracomOnly, 
   onIntracomChange,
   viewMode,
@@ -46,7 +48,9 @@ export function DataFilters({
   maxAmount,
   onAmountChange,
   searchTerm,
-  onSearchChange
+  onSearchChange,
+  dateRange,
+  onDateRangeChange
 }: DataFiltersProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [localMinAmount, setLocalMinAmount] = useState(minAmount?.toString() || "");
@@ -67,12 +71,13 @@ export function DataFilters({
   };
 
   const resetFilters = () => {
-    onMonthChange(null);
+    onMonthsChange([]);
     onViewModeChange("all");
     onIntracomChange(false);
     onCompanyChange(null);
     onAmountChange(null, null);
     onSearchChange("");
+    onDateRangeChange(null);
     setLocalMinAmount("");
     setLocalMaxAmount("");
   };
@@ -83,8 +88,58 @@ export function DataFilters({
     onAmountChange(min, max);
   };
 
-  const hasActiveFilters = selectedMonth !== null || viewMode !== "all" || 
-    selectedCompany !== null || minAmount !== null || maxAmount !== null || searchTerm !== "";
+  const hasActiveFilters = selectedMonths.length > 0 || viewMode !== "all" || 
+    selectedCompany !== null || minAmount !== null || maxAmount !== null || 
+    searchTerm !== "" || (dateRange && (dateRange.start || dateRange.end));
+
+  const toggleMonth = (month: string) => {
+    if (selectedMonths.includes(month)) {
+      onMonthsChange(selectedMonths.filter(m => m !== month));
+    } else {
+      onMonthsChange([...selectedMonths, month]);
+    }
+  };
+
+  // Sélecteurs de trimestres
+  const selectQuarter = (quarter: number, year: string) => {
+    const yearPrefix = year;
+    const quarterMonths = [];
+    
+    // Déterminer quels mois appartiennent au trimestre sélectionné
+    for (let i = 0; i < 3; i++) {
+      const monthNum = (quarter - 1) * 3 + i + 1;
+      const monthStr = monthNum < 10 ? `0${monthNum}` : `${monthNum}`;
+      const monthKey = `${yearPrefix}-${monthStr}`;
+      
+      // Vérifier si ce mois existe dans nos données
+      if (months.includes(monthKey)) {
+        quarterMonths.push(monthKey);
+      }
+    }
+    
+    // Ajouter ces mois à la sélection, en évitant les doublons
+    const newSelection = [...selectedMonths];
+    quarterMonths.forEach(month => {
+      if (!newSelection.includes(month)) {
+        newSelection.push(month);
+      }
+    });
+    
+    onMonthsChange(newSelection);
+  };
+
+  // Grouper les mois par année
+  const monthsByYear: Record<string, string[]> = {};
+  months.forEach(month => {
+    const year = month.split('-')[0];
+    if (!monthsByYear[year]) {
+      monthsByYear[year] = [];
+    }
+    monthsByYear[year].push(month);
+  });
+
+  // Trier les années par ordre décroissant
+  const years = Object.keys(monthsByYear).sort((a, b) => b.localeCompare(a));
 
   return (
     <div className="bg-muted/30 p-4 rounded-lg space-y-4">
@@ -106,15 +161,28 @@ export function DataFilters({
           </div>
           
           <Select 
-            value={selectedMonth || "all"} 
-            onValueChange={(value) => onMonthChange(value === "all" ? null : value)}
+            value={selectedMonths.length === 1 ? selectedMonths[0] : selectedMonths.length > 1 ? "multiple" : "all"} 
+            onValueChange={(value) => {
+              if (value === "all") {
+                onMonthsChange([]);
+              } else if (value !== "multiple" && !selectedMonths.includes(value)) {
+                onMonthsChange([value]);
+              }
+            }}
           >
             <SelectTrigger className="h-9 w-auto md:w-48">
               <Calendar className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Tous les mois" />
+              <SelectValue placeholder={
+                selectedMonths.length === 0 ? "Tous les mois" :
+                selectedMonths.length === 1 ? formatMonth(selectedMonths[0]) :
+                `${selectedMonths.length} mois sélectionnés`
+              } />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les mois</SelectItem>
+              <SelectItem value="multiple" disabled={selectedMonths.length <= 1}>
+                Sélection multiple ({selectedMonths.length})
+              </SelectItem>
               {months.map(month => (
                 <SelectItem key={month} value={month}>
                   {formatMonth(month)}
@@ -151,19 +219,77 @@ export function DataFilters({
             
             <CollapsibleContent>
               <div className="grid gap-6 md:grid-cols-2 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label>Période détaillée</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {months.map(month => (
-                      <Button
-                        key={month}
-                        variant={selectedMonth === month ? "default" : "outline"}
-                        size="sm"
-                        className="justify-start"
-                        onClick={() => onMonthChange(selectedMonth === month ? null : month)}
-                      >
-                        {formatMonth(month)}
-                      </Button>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="flex justify-between">
+                      <span>Périodes</span>
+                      {selectedMonths.length > 0 && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-5 text-xs"
+                          onClick={() => onMonthsChange([])}
+                        >
+                          Effacer la sélection
+                        </Button>
+                      )}
+                    </Label>
+                    
+                    {years.map(year => (
+                      <div key={year} className="mb-4">
+                        <h4 className="text-sm font-medium mb-1">{year}</h4>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => selectQuarter(1, year)}
+                          >
+                            T1 {year}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => selectQuarter(2, year)}
+                          >
+                            T2 {year}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => selectQuarter(3, year)}
+                          >
+                            T3 {year}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() => selectQuarter(4, year)}
+                          >
+                            T4 {year}
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {monthsByYear[year].map(month => (
+                            <div key={month} className="flex items-center space-x-2 rounded-md px-2 py-1">
+                              <Checkbox 
+                                id={`month-${month}`}
+                                checked={selectedMonths.includes(month)}
+                                onCheckedChange={() => toggleMonth(month)}
+                              />
+                              <label
+                                htmlFor={`month-${month}`}
+                                className="text-sm cursor-pointer"
+                              >
+                                {formatMonth(month).split(' ')[0]}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -257,14 +383,16 @@ export function DataFilters({
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-2 pt-3 border-t">
           <h4 className="text-sm font-medium mr-2">Filtres actifs:</h4>
-          {selectedMonth && (
+          {selectedMonths.length > 0 && (
             <Button 
               variant="secondary" 
               size="sm" 
               className="h-7 text-xs"
-              onClick={() => onMonthChange(null)}
+              onClick={() => onMonthsChange([])}
             >
-              {formatMonth(selectedMonth)} ✕
+              {selectedMonths.length === 1 
+                ? formatMonth(selectedMonths[0]) 
+                : `${selectedMonths.length} mois sélectionnés`} ✕
             </Button>
           )}
           {viewMode !== "all" && (

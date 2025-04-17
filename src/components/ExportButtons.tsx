@@ -15,13 +15,18 @@ interface ConsolidatedData {
 
 interface ExportButtonsProps {
   filteredData: OrderData[];
-  selectedMonth: string | null;
+  selectedMonths: string[];
   showIntracomOnly: boolean;
   stats: {
     total: string;
     totalVAT: string;
     totalExcludingVAT: string;
     orderCount: number;
+    intracomSales: string;
+    domesticSales: string;
+    domesticVAT: string;
+    domesticExcludingVAT: string;
+    exportSales: string;
   };
   viewMode?: ViewMode;
   consolidatedData?: ConsolidatedData[];
@@ -29,7 +34,7 @@ interface ExportButtonsProps {
 
 export function ExportButtons({ 
   filteredData, 
-  selectedMonth, 
+  selectedMonths, 
   showIntracomOnly, 
   stats,
   viewMode = "all",
@@ -37,17 +42,17 @@ export function ExportButtons({
 }: ExportButtonsProps) {
   const handleCSVExport = () => {
     if (viewMode === "consolidated" && consolidatedData) {
-      exportConsolidatedToCSV(consolidatedData, selectedMonth);
+      exportConsolidatedToCSV(consolidatedData, selectedMonths);
     } else {
-      exportToCSV(filteredData, selectedMonth, showIntracomOnly);
+      exportToCSV(filteredData, selectedMonths, showIntracomOnly);
     }
   };
 
   const handlePDFExport = () => {
     if (viewMode === "consolidated" && consolidatedData) {
-      exportConsolidatedToPDF(consolidatedData, selectedMonth, stats);
+      exportConsolidatedToPDF(consolidatedData, selectedMonths, stats);
     } else {
-      exportToPDF(filteredData, selectedMonth, showIntracomOnly, stats);
+      exportToPDF(filteredData, selectedMonths, showIntracomOnly, stats);
     }
   };
 

@@ -21,7 +21,7 @@ interface DataDisplayProps {
 }
 
 export function DataDisplay({ data }: DataDisplayProps) {
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
   const [showIntracomOnly, setShowIntracomOnly] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("all");
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
@@ -29,11 +29,10 @@ export function DataDisplay({ data }: DataDisplayProps) {
   const [maxAmount, setMaxAmount] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("table");
+  const [dateRange, setDateRange] = useState<{ start: Date | null; end: Date | null } | null>(null);
   
   const months = useMemo(() => getUniqueMonths(data), [data]);
   const companies = useMemo(() => getUniqueCompanies(data), [data]);
-  
-  // Suppression de l'initialisation automatique du premier mois pour que "Tous les mois" fonctionne correctement
 
   const handleAmountChange = (min: number | null, max: number | null) => {
     setMinAmount(min);
@@ -46,14 +45,15 @@ export function DataDisplay({ data }: DataDisplayProps) {
   const filteredData = useMemo(() => 
     filterData(
       data, 
-      selectedMonth, 
+      selectedMonths, 
       effectiveIntracomFilter,
       selectedCompany,
       minAmount,
       maxAmount,
-      searchTerm
+      searchTerm,
+      dateRange
     ), 
-    [data, selectedMonth, effectiveIntracomFilter, selectedCompany, minAmount, maxAmount, searchTerm]
+    [data, selectedMonths, effectiveIntracomFilter, selectedCompany, minAmount, maxAmount, searchTerm, dateRange]
   );
 
   const consolidatedData = useMemo(() => 
@@ -79,8 +79,8 @@ export function DataDisplay({ data }: DataDisplayProps) {
     <div className="space-y-6">
       <DataFilters 
         months={months}
-        selectedMonth={selectedMonth}
-        onMonthChange={setSelectedMonth}
+        selectedMonths={selectedMonths}
+        onMonthsChange={setSelectedMonths}
         showIntracomOnly={showIntracomOnly}
         onIntracomChange={setShowIntracomOnly}
         viewMode={viewMode}
@@ -93,13 +93,15 @@ export function DataDisplay({ data }: DataDisplayProps) {
         onAmountChange={handleAmountChange}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        dateRange={dateRange}
+        onDateRangeChange={setDateRange}
       />
       
       <div className="flex justify-between items-center">
         <StatisticsPanel stats={stats} />
         <ExportButtons 
           filteredData={filteredData}
-          selectedMonth={selectedMonth}
+          selectedMonths={selectedMonths}
           showIntracomOnly={effectiveIntracomFilter}
           stats={stats}
           viewMode={viewMode}

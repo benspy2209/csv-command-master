@@ -14,8 +14,46 @@ interface ConsolidatedData {
   originalOrders: OrderData[];
 }
 
+// Fonction pour générer un libellé de période
+const getPeriodLabel = (selectedMonths: string[]) => {
+  if (selectedMonths.length === 0) {
+    return "toutes_commandes";
+  } else if (selectedMonths.length === 1) {
+    return format(parse(selectedMonths[0], "yyyy-MM", new Date()), "MMMM_yyyy", { locale: fr });
+  } else {
+    // Trouver si c'est un trimestre
+    const firstMonth = selectedMonths[0];
+    const year = firstMonth.split('-')[0];
+    const allSameYear = selectedMonths.every(month => month.startsWith(year));
+    
+    // Vérifier si les mois forment un trimestre
+    const monthNumbers = selectedMonths
+      .map(month => parseInt(month.split('-')[1]))
+      .sort((a, b) => a - b);
+    
+    if (allSameYear && selectedMonths.length === 3) {
+      if (monthNumbers[0] === 1 && monthNumbers[2] === 3) {
+        return `T1_${year}`;
+      } else if (monthNumbers[0] === 4 && monthNumbers[2] === 6) {
+        return `T2_${year}`;
+      } else if (monthNumbers[0] === 7 && monthNumbers[2] === 9) {
+        return `T3_${year}`;
+      } else if (monthNumbers[0] === 10 && monthNumbers[2] === 12) {
+        return `T4_${year}`;
+      }
+    }
+    
+    // Si ce n'est pas un trimestre exact, utiliser le nombre de mois
+    if (allSameYear) {
+      return `${selectedMonths.length}_mois_${year}`;
+    } else {
+      return `${selectedMonths.length}_mois_multi_annees`;
+    }
+  }
+};
+
 // Export en CSV
-export const exportToCSV = (filteredData: OrderData[], selectedMonth: string | null, showIntracomOnly: boolean) => {
+export const exportToCSV = (filteredData: OrderData[], selectedMonths: string[], showIntracomOnly: boolean) => {
   const headers = ['Date', 'Société', 'N° TVA', 'Montant HT', 'TVA', 'Montant Total'];
   
   const csvData = filteredData.map(order => [
@@ -33,21 +71,19 @@ export const exportToCSV = (filteredData: OrderData[], selectedMonth: string | n
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   
-  const monthLabel = selectedMonth 
-    ? format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM_yyyy", { locale: fr })
-    : "toutes_commandes";
+  const periodLabel = getPeriodLabel(selectedMonths);
   const intracomLabel = showIntracomOnly ? "_intracom" : "";
   
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `commandes_${monthLabel}${intracomLabel}.csv`);
+  link.setAttribute('download', `commandes_${periodLabel}${intracomLabel}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 };
 
 // Export des données consolidées en CSV
-export const exportConsolidatedToCSV = (consolidatedData: ConsolidatedData[], selectedMonth: string | null) => {
+export const exportConsolidatedToCSV = (consolidatedData: ConsolidatedData[], selectedMonths: string[]) => {
   const headers = ['Société', 'N° TVA', 'Nombre de commandes', 'Montant Total'];
   
   const csvData = consolidatedData.map(client => [
@@ -63,13 +99,11 @@ export const exportConsolidatedToCSV = (consolidatedData: ConsolidatedData[], se
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   
-  const monthLabel = selectedMonth 
-    ? format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM_yyyy", { locale: fr })
-    : "toutes_commandes";
+  const periodLabel = getPeriodLabel(selectedMonths);
   
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `intracom_consolidee_${monthLabel}.csv`);
+  link.setAttribute('download', `intracom_consolidee_${periodLabel}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -78,36 +112,69 @@ export const exportConsolidatedToCSV = (consolidatedData: ConsolidatedData[], se
 // Export en PDF
 export const exportToPDF = (
   filteredData: OrderData[], 
-  selectedMonth: string | null, 
+  selectedMonths: string[], 
   showIntracomOnly: boolean,
   stats: {
     total: string;
     totalVAT: string;
     totalExcludingVAT: string;
     orderCount: number;
+    intracomSales: string;
+    domesticSales: string;
+    domesticVAT: string;
+    domesticExcludingVAT: string;
+    exportSales: string;
   }
 ) => {
   const doc = new jsPDF();
   
   // Titre
-  const monthLabel = selectedMonth 
-    ? format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy", { locale: fr })
-    : "Toutes les commandes";
+  const periodLabel = selectedMonths.length === 0 
+    ? "Toutes les commandes"
+    : selectedMonths.length === 1 
+      ? format(parse(selectedMonths[0], "yyyy-MM", new Date()), "MMMM yyyy", { locale: fr })
+      : `${selectedMonths.length} mois sélectionnés`;
   const intracomLabel = showIntracomOnly ? " (Intracom uniquement)" : "";
   
   doc.setFontSize(16);
-  doc.text(`Rapport des commandes: ${monthLabel}${intracomLabel}`, 14, 20);
+  doc.text(`Rapport des commandes: ${periodLabel}${intracomLabel}`, 14, 20);
   
-  // Statistiques
+  // Tableau récapitulatif plus détaillé
   doc.setFontSize(12);
-  doc.text(`Nombre de commandes: ${stats.orderCount}`, 14, 30);
-  doc.text(`Montant total HT: ${stats.totalExcludingVAT.replace('.', ',')} €`, 14, 38);
-  doc.text(`TVA totale: ${stats.totalVAT.replace('.', ',')} €`, 14, 46);
-  doc.text(`Montant total TTC: ${stats.total.replace('.', ',')} €`, 14, 54);
+  doc.text("Récapitulatif comptable", 14, 30);
   
-  // Tableau
   autoTable(doc, {
-    startY: 65,
+    startY: 35,
+    head: [['Catégorie', 'Montant HT', 'TVA', 'Montant TTC']],
+    body: [
+      ['Total général', 
+       `${parseFloat(stats.totalExcludingVAT).toFixed(2).replace('.', ',')} €`, 
+       `${parseFloat(stats.totalVAT).toFixed(2).replace('.', ',')} €`, 
+       `${parseFloat(stats.total).toFixed(2).replace('.', ',')} €`],
+      ['Ventes domestiques', 
+       `${parseFloat(stats.domesticExcludingVAT).toFixed(2).replace('.', ',')} €`, 
+       `${parseFloat(stats.domesticVAT).toFixed(2).replace('.', ',')} €`, 
+       `${parseFloat(stats.domesticSales).toFixed(2).replace('.', ',')} €`],
+      ['Ventes intracom', 
+       `${parseFloat(stats.intracomSales).toFixed(2).replace('.', ',')} €`, 
+       '0,00 €', 
+       `${parseFloat(stats.intracomSales).toFixed(2).replace('.', ',')} €`],
+      ['Exportations', 
+       `${parseFloat(stats.exportSales).toFixed(2).replace('.', ',')} €`, 
+       '0,00 €', 
+       `${parseFloat(stats.exportSales).toFixed(2).replace('.', ',')} €`],
+    ],
+    theme: 'striped',
+    headStyles: { fillColor: [66, 139, 202] },
+    styles: { fontSize: 10 }
+  });
+  
+  // Statistiques générales
+  doc.text(`Nombre de commandes: ${stats.orderCount}`, 14, doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : 95);
+  
+  // Tableau des commandes
+  autoTable(doc, {
+    startY: doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 15 : 105,
     head: [['Date', 'Société', 'N° TVA', 'Montant HT', 'TVA', 'Total']],
     body: filteredData.map(order => [
       order.date,
@@ -118,38 +185,47 @@ export const exportToPDF = (
       `${order.totalAmount.toFixed(2).replace('.', ',')} €`
     ]),
     theme: 'striped',
-    headStyles: { fillColor: [66, 139, 202] }
+    headStyles: { fillColor: [66, 139, 202] },
+    styles: { fontSize: 8 }
   });
   
-  doc.save(`commandes_${monthLabel.replace(/ /g, '_')}${intracomLabel ? '_intracom' : ''}.pdf`);
+  const filenamePeriod = getPeriodLabel(selectedMonths);
+  doc.save(`commandes_${filenamePeriod}${intracomLabel ? '_intracom' : ''}.pdf`);
 };
 
 // Export des données consolidées en PDF
 export const exportConsolidatedToPDF = (
   consolidatedData: ConsolidatedData[], 
-  selectedMonth: string | null,
+  selectedMonths: string[],
   stats: {
     total: string;
     totalVAT: string;
     totalExcludingVAT: string;
     orderCount: number;
+    intracomSales: string;
+    domesticSales: string;
+    domesticVAT: string;
+    domesticExcludingVAT: string;
+    exportSales: string;
   }
 ) => {
   const doc = new jsPDF();
   
   // Titre
-  const monthLabel = selectedMonth 
-    ? format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy", { locale: fr })
-    : "Toutes les périodes";
+  const periodLabel = selectedMonths.length === 0 
+    ? "Toutes les périodes" 
+    : selectedMonths.length === 1 
+      ? format(parse(selectedMonths[0], "yyyy-MM", new Date()), "MMMM yyyy", { locale: fr })
+      : `${selectedMonths.length} mois sélectionnés`;
   
   doc.setFontSize(16);
-  doc.text(`Rapport intracom consolidé: ${monthLabel}`, 14, 20);
+  doc.text(`Rapport intracom consolidé: ${periodLabel}`, 14, 20);
   
   // Statistiques
   doc.setFontSize(12);
   doc.text(`Nombre total de clients: ${consolidatedData.length}`, 14, 30);
   doc.text(`Nombre total de commandes intracom: ${stats.orderCount}`, 14, 38);
-  doc.text(`Montant total: ${stats.total.replace('.', ',')} €`, 14, 46);
+  doc.text(`Montant total: ${parseFloat(stats.intracomSales).toFixed(2).replace('.', ',')} €`, 14, 46);
   
   // Tableau
   autoTable(doc, {
@@ -165,5 +241,6 @@ export const exportConsolidatedToPDF = (
     headStyles: { fillColor: [66, 139, 202] }
   });
   
-  doc.save(`intracom_consolidee_${monthLabel.replace(/ /g, '_')}.pdf`);
+  const filenamePeriod = getPeriodLabel(selectedMonths);
+  doc.save(`intracom_consolidee_${filenamePeriod}.pdf`);
 };

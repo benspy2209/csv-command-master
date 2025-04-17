@@ -7,6 +7,11 @@ interface StatisticsPanelProps {
     totalVAT: string;
     totalExcludingVAT: string;
     orderCount: number;
+    intracomSales: string;
+    domesticSales: string;
+    domesticVAT: string;
+    domesticExcludingVAT: string;
+    exportSales: string;
   };
 }
 
