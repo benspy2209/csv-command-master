@@ -1,4 +1,3 @@
-
 import { format, parse } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
@@ -100,26 +99,26 @@ export function DataFilters({
     }
   };
 
-  // Sélecteurs de trimestres - CORRIGÉ
   const selectQuarter = (quarter: number, year: string) => {
+    const quarterMap = {
+      1: ["01", "02", "03"],
+      2: ["04", "05", "06"],
+      3: ["07", "08", "09"],
+      4: ["10", "11", "12"]
+    };
+    
+    const monthsForQuarter = quarterMap[quarter as keyof typeof quarterMap];
     const quarterMonths = [];
     
-    // Déterminer quels mois appartiennent au trimestre sélectionné
-    for (let i = 0; i < 3; i++) {
-      const monthNum = (quarter - 1) * 3 + i + 1;
-      const monthStr = monthNum < 10 ? `0${monthNum}` : `${monthNum}`;
+    for (const monthStr of monthsForQuarter) {
       const monthKey = `${year}-${monthStr}`;
-      
-      // Vérifier si ce mois existe dans nos données
       if (months.includes(monthKey)) {
         quarterMonths.push(monthKey);
       }
     }
     
-    // Si aucun mois trouvé pour ce trimestre, ne rien faire
     if (quarterMonths.length === 0) return;
     
-    // Ajouter ces mois à la sélection, en évitant les doublons
     const newSelection = [...selectedMonths];
     quarterMonths.forEach(month => {
       if (!newSelection.includes(month)) {
@@ -130,7 +129,6 @@ export function DataFilters({
     onMonthsChange(newSelection);
   };
 
-  // Grouper les mois par année
   const monthsByYear: Record<string, string[]> = {};
   months.forEach(month => {
     const year = month.split('-')[0];
@@ -140,7 +138,6 @@ export function DataFilters({
     monthsByYear[year].push(month);
   });
 
-  // Trier les années par ordre décroissant
   const years = Object.keys(monthsByYear).sort((a, b) => b.localeCompare(a));
 
   return (
@@ -351,7 +348,6 @@ export function DataFilters({
                         checked={showIntracomOnly}
                         onCheckedChange={(checked) => {
                           onIntracomChange(checked === true);
-                          // Si on active l'intracom dans les filtres avancés, on désactive la vue consolidée
                           if (checked === true) {
                             onViewModeChange("intracom");
                           }
